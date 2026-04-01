@@ -254,15 +254,22 @@ public class MainActivity extends Activity {
         String reasonOfCNV = extractReasonOfCNV(text1);
         String applicantName = extractApplicantName(text1);
         
-        // Parse Text Box 2 (optional)
+        // Parse Text Box 2 (optional) - New format: Line 1 = coordinates, Line 2 = area
         String longitude = "";
+        String area = "";
         String text2 = textBox2.getText().toString().trim();
         if (!text2.isEmpty()) {
-            longitude = extractLongitude(text2);
+            String[] lines = text2.split("\n");
+            if (lines.length >= 1) {
+                longitude = lines[0].trim();
+            }
+            if (lines.length >= 2) {
+                area = lines[1].trim();
+            }
         }
         
         // Fill the row
-        fillRow(targetRow, bankName, applicantName, reasonOfCNV, longitude);
+        fillRow(targetRow, bankName, applicantName, reasonOfCNV, longitude, area);
         selectRow(targetRow);
         currentAutoFillRow = targetRow + 1;
         
@@ -335,7 +342,7 @@ public class MainActivity extends Activity {
     }
     
     private void fillRow(int rowIndex, String bankName, String applicantName, 
-                         String reasonOfCNV, String longitude) {
+                         String reasonOfCNV, String longitude, String area) {
         TableRow row = dataRows.get(rowIndex);
         
         setTableCell(row, 0, bankName);
@@ -344,7 +351,7 @@ public class MainActivity extends Activity {
         setTableCell(row, 3, reasonOfCNV);
         // Column 4 (Latitude) - blank
         setTableCell(row, 5, longitude);
-        // Column 6 (Area) - blank
+        setTableCell(row, 6, area);
         // Column 7 (KM) - blank
     }
     

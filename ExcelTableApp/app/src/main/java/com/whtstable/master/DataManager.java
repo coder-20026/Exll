@@ -154,6 +154,24 @@ public class DataManager {
         return true;
     }
     
+    public boolean updateActiveRowWithCoordinatesAndArea(String longitude, String area) {
+        if (activeRowIndex < 0 || activeRowIndex >= rows.size()) {
+            return false;
+        }
+        
+        if (activeRowLocked) {
+            return false;
+        }
+        
+        RowData activeRow = rows.get(activeRowIndex);
+        activeRow.longitude = longitude;
+        activeRow.area = area;
+        activeRow.hasText2 = true;
+        
+        saveData();
+        return true;
+    }
+    
     public void lockActiveRow() {
         activeRowLocked = true;
         saveData();

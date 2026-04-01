@@ -24,6 +24,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,19 +39,39 @@ public class FloatingButtonService extends Service {
     private WindowManager windowManager;
     private View floatingButton;
     private View overlayPopup;
+    private View closeTarget;
+    private View rightInputBox;
     private WindowManager.LayoutParams buttonParams;
     private WindowManager.LayoutParams popupParams;
+    private WindowManager.LayoutParams closeTargetParams;
+    private WindowManager.LayoutParams rightInputParams;
     private DataManager dataManager;
     
     private int initialX, initialY;
     private float initialTouchX, initialTouchY;
     private long touchStartTime;
     private boolean isLongPress = false;
+    private boolean isDragging = false;
+    
+    // Popup drag variables
+    private int popupInitialX, popupInitialY;
+    private float popupInitialTouchX, popupInitialTouchY;
+    private boolean isPopupDragging = false;
+    private long popupTouchStartTime;
     
     // Popup views
-    private EditText etText1, etText2;
+    private EditText etText1;
     private TextView tvActiveRow, tvStatus, tvPreview, btnClosePopup;
     private Button btnDone, btnClear, btnOpenApp;
+    
+    // Right input box views
+    private EditText etRightInput;
+    private Button btnRightOk;
+    private LinearLayout rightInputContainer;
+    
+    // Screen dimensions
+    private int screenHeight;
+    private int closeTargetHeight = 150;
     
     @Override
     public IBinder onBind(Intent intent) {
@@ -64,6 +85,11 @@ public class FloatingButtonService extends Service {
         dataManager = DataManager.getInstance(this);
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         
+        // Get screen height
+        android.util.DisplayMetrics metrics = new android.util.DisplayMetrics();
+        windowManager.getDefaultDisplay().getMetrics(metrics);
+        screenHeight = metrics.heightPixels;
+        
         // Start as foreground service for Android 8+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannel();
@@ -71,6 +97,7 @@ public class FloatingButtonService extends Service {
         }
         
         createFloatingButton();
+        createRightInputBox();
     }
     
     private void createNotificationChannel() {
@@ -113,6 +140,45 @@ public class FloatingButtonService extends Service {
             .build();
     }
     
+    private void createCloseTarget() {
+        if (closeTarget != null) return;
+        
+        closeTarget = new TextView(this);
+        TextView tv = (TextView) closeTarget;
+        tv.setText("✕ Close");
+        tv.setTextSize(18);
+        tv.setTextColor(0xFFFFFFFF);
+        tv.setGravity(Gravity.CENTER);
+        tv.setBackgroundColor(0xFFFF5252);
+        tv.setPadding(0, 30, 0, 30);
+        
+        int layoutType;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            layoutType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+        } else {
+            layoutType = WindowManager.LayoutParams.TYPE_PHONE;
+        }
+        
+        closeTargetParams = new WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            closeTargetHeight,
+            layoutType,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            PixelFormat.TRANSLUCENT
+        );
+        
+        closeTargetParams.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+        
+        windowManager.addView(closeTarget, closeTargetParams);
+    }
+    
+    private void removeCloseTarget() {
+        if (closeTarget != null) {
+            windowManager.removeView(closeTarget);
+            closeTarget = null;
+        }
+    }
+    
     private void createFloatingButton() {
         floatingButton = LayoutInflater.from(this).inflate(R.layout.floating_button_layout, null);
         
@@ -145,7 +211,8 @@ public class FloatingButtonService extends Service {
                 @Override
                 public void run() {
                     isLongPress = true;
-                    showCloseOption();
+                    isDragging = true;
+                    createCloseTarget();
                 }
             };
             
@@ -159,7 +226,8 @@ public class FloatingButtonService extends Service {
                         initialTouchY = event.getRawY();
                         touchStartTime = System.currentTimeMillis();
                         isLongPress = false;
-                        longPressHandler.postDelayed(longPressRunnable, 500);
+                        isDragging = false;
+                        longPressHandler.postDelayed(longPressRunnable, 300);
                         return true;
                         
                     case MotionEvent.ACTION_MOVE:
@@ -167,18 +235,46 @@ public class FloatingButtonService extends Service {
                         int deltaY = (int) (event.getRawY() - initialTouchY);
                         
                         if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
-                            longPressHandler.removeCallbacks(longPressRunnable);
+                            isDragging = true;
+                            if (!isLongPress) {
+                                longPressHandler.removeCallbacks(longPressRunnable);
+                                createCloseTarget();
+                            }
                         }
                         
                         buttonParams.x = initialX + deltaX;
                         buttonParams.y = initialY + deltaY;
                         windowManager.updateViewLayout(floatingButton, buttonParams);
+                        
+                        // Update right input box position
+                        updateRightInputPosition();
+                        
+                        // Highlight close target if bubble is near bottom
+                        if (closeTarget != null) {
+                            int bubbleBottom = buttonParams.y + 60;
+                            if (bubbleBottom > screenHeight - closeTargetHeight - 100) {
+                                ((TextView) closeTarget).setBackgroundColor(0xFFD32F2F);
+                            } else {
+                                ((TextView) closeTarget).setBackgroundColor(0xFFFF5252);
+                            }
+                        }
                         return true;
                         
                     case MotionEvent.ACTION_UP:
                         longPressHandler.removeCallbacks(longPressRunnable);
                         
-                        if (!isLongPress && System.currentTimeMillis() - touchStartTime < 500) {
+                        // Check if dropped on close target
+                        int bubbleBottom = buttonParams.y + 60;
+                        if (isDragging && bubbleBottom > screenHeight - closeTargetHeight - 100) {
+                            removeCloseTarget();
+                            stopSelf();
+                            Toast.makeText(FloatingButtonService.this, "Quick Entry closed", Toast.LENGTH_SHORT).show();
+                            return true;
+                        }
+                        
+                        removeCloseTarget();
+                        
+                        if (!isDragging && System.currentTimeMillis() - touchStartTime < 300) {
                             openOverlayPopup();
                         }
                         return true;
@@ -188,18 +284,119 @@ public class FloatingButtonService extends Service {
         });
     }
     
-    private void showCloseOption() {
-        Toast.makeText(this, "Tap again to close floating button", Toast.LENGTH_SHORT).show();
+    private void createRightInputBox() {
+        rightInputBox = LayoutInflater.from(this).inflate(R.layout.right_input_layout, null);
         
-        final ImageView btnImage = (ImageView) floatingButton.findViewById(R.id.floatingButton);
+        int layoutType;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            layoutType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+        } else {
+            layoutType = WindowManager.LayoutParams.TYPE_PHONE;
+        }
         
-        btnImage.setOnClickListener(new View.OnClickListener() {
+        rightInputParams = new WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            layoutType,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT
+        );
+        
+        rightInputParams.gravity = Gravity.TOP | Gravity.START;
+        rightInputParams.x = buttonParams.x + 70;
+        rightInputParams.y = buttonParams.y;
+        
+        windowManager.addView(rightInputBox, rightInputParams);
+        
+        rightInputContainer = (LinearLayout) rightInputBox.findViewById(R.id.rightInputContainer);
+        etRightInput = (EditText) rightInputBox.findViewById(R.id.etRightInput);
+        btnRightOk = (Button) rightInputBox.findViewById(R.id.btnRightOk);
+        
+        // Initially hidden
+        rightInputContainer.setVisibility(View.GONE);
+        
+        btnRightOk.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                stopSelf();
-                Toast.makeText(FloatingButtonService.this, "Quick Entry closed", Toast.LENGTH_SHORT).show();
+                processRightInput();
             }
         });
+    }
+    
+    private void updateRightInputPosition() {
+        if (rightInputBox != null && rightInputParams != null) {
+            rightInputParams.x = buttonParams.x + 70;
+            rightInputParams.y = buttonParams.y;
+            windowManager.updateViewLayout(rightInputBox, rightInputParams);
+        }
+    }
+    
+    private void showRightInputBox() {
+        if (rightInputContainer != null) {
+            rightInputContainer.setVisibility(View.VISIBLE);
+            rightInputContainer.setAlpha(1.0f);
+        }
+    }
+    
+    private void hideRightInputBox() {
+        if (rightInputContainer != null) {
+            rightInputContainer.setVisibility(View.GONE);
+        }
+    }
+    
+    private void disableRightInputBox() {
+        if (rightInputContainer != null) {
+            rightInputContainer.setVisibility(View.VISIBLE);
+            rightInputContainer.setAlpha(0.4f);
+            etRightInput.setEnabled(false);
+            btnRightOk.setEnabled(false);
+        }
+    }
+    
+    private void enableRightInputBox() {
+        if (rightInputContainer != null) {
+            rightInputContainer.setVisibility(View.VISIBLE);
+            rightInputContainer.setAlpha(1.0f);
+            etRightInput.setEnabled(true);
+            btnRightOk.setEnabled(true);
+        }
+    }
+    
+    private void processRightInput() {
+        if (!dataManager.hasActiveRow()) {
+            Toast.makeText(this, "Pehle WhatsApp text add karo!", Toast.LENGTH_LONG).show();
+            return;
+        }
+        
+        String input = etRightInput.getText().toString().trim();
+        if (input.isEmpty()) {
+            Toast.makeText(this, "Coordinates aur Area enter karo!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Parse input - Line 1: coordinates, Line 2: area
+        String[] lines = input.split("\n");
+        String longitude = "";
+        String area = "";
+        
+        if (lines.length >= 1) {
+            longitude = lines[0].trim();
+        }
+        if (lines.length >= 2) {
+            area = lines[1].trim();
+        }
+        
+        // Update active row with longitude and area
+        boolean success = dataManager.updateActiveRowWithCoordinatesAndArea(longitude, area);
+        if (success) {
+            dataManager.lockActiveRow();
+            Toast.makeText(this, "Entry saved!", Toast.LENGTH_SHORT).show();
+            etRightInput.setText("");
+            hideRightInputBox();
+            closeOverlayPopup();
+        } else {
+            Toast.makeText(this, "Error saving entry!", Toast.LENGTH_SHORT).show();
+        }
     }
     
     private void openOverlayPopup() {
@@ -225,7 +422,13 @@ public class FloatingButtonService extends Service {
             PixelFormat.TRANSLUCENT
         );
         
-        popupParams.gravity = Gravity.CENTER;
+        popupParams.gravity = Gravity.TOP | Gravity.START;
+        
+        // Position popup in center of screen
+        android.util.DisplayMetrics metrics = new android.util.DisplayMetrics();
+        windowManager.getDefaultDisplay().getMetrics(metrics);
+        popupParams.x = (metrics.widthPixels - 320) / 2;
+        popupParams.y = (metrics.heightPixels - 400) / 2;
         
         windowManager.addView(overlayPopup, popupParams);
         
@@ -235,7 +438,6 @@ public class FloatingButtonService extends Service {
     
     private void initializePopupViews() {
         etText1 = (EditText) overlayPopup.findViewById(R.id.etPopupText1);
-        etText2 = (EditText) overlayPopup.findViewById(R.id.etPopupText2);
         tvActiveRow = (TextView) overlayPopup.findViewById(R.id.tvPopupActiveRow);
         tvStatus = (TextView) overlayPopup.findViewById(R.id.tvPopupStatus);
         tvPreview = (TextView) overlayPopup.findViewById(R.id.tvPopupPreview);
@@ -243,6 +445,9 @@ public class FloatingButtonService extends Service {
         btnDone = (Button) overlayPopup.findViewById(R.id.btnPopupDone);
         btnClear = (Button) overlayPopup.findViewById(R.id.btnPopupClear);
         btnOpenApp = (Button) overlayPopup.findViewById(R.id.btnOpenApp);
+        
+        // Get popup header for drag functionality
+        View popupHeader = overlayPopup.findViewById(R.id.popupHeader);
         
         etText1.addTextChangedListener(new TextWatcher() {
             @Override
@@ -255,24 +460,50 @@ public class FloatingButtonService extends Service {
                 String text = s.toString().trim();
                 if (!text.isEmpty()) {
                     processText1(text);
+                    // Enable right input box when text1 has content
+                    enableRightInputBox();
+                } else {
+                    // Disable right input box when text1 is empty
+                    disableRightInputBox();
                 }
             }
         });
         
-        etText2.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            
-            @Override
-            public void afterTextChanged(Editable s) {
-                String text = s.toString().trim();
-                if (!text.isEmpty()) {
-                    processText2(text);
+        // Popup drag functionality on header
+        if (popupHeader != null) {
+            popupHeader.setOnTouchListener(new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_DOWN:
+                            popupInitialX = popupParams.x;
+                            popupInitialY = popupParams.y;
+                            popupInitialTouchX = event.getRawX();
+                            popupInitialTouchY = event.getRawY();
+                            popupTouchStartTime = System.currentTimeMillis();
+                            isPopupDragging = false;
+                            return true;
+                            
+                        case MotionEvent.ACTION_MOVE:
+                            int deltaX = (int) (event.getRawX() - popupInitialTouchX);
+                            int deltaY = (int) (event.getRawY() - popupInitialTouchY);
+                            
+                            if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+                                isPopupDragging = true;
+                            }
+                            
+                            popupParams.x = popupInitialX + deltaX;
+                            popupParams.y = popupInitialY + deltaY;
+                            windowManager.updateViewLayout(overlayPopup, popupParams);
+                            return true;
+                            
+                        case MotionEvent.ACTION_UP:
+                            return true;
+                    }
+                    return false;
                 }
-            }
-        });
+            });
+        }
         
         btnClosePopup.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -286,6 +517,7 @@ public class FloatingButtonService extends Service {
             public void onClick(View v) {
                 dataManager.lockActiveRow();
                 Toast.makeText(FloatingButtonService.this, "Entry saved!", Toast.LENGTH_SHORT).show();
+                hideRightInputBox();
                 closeOverlayPopup();
             }
         });
@@ -294,7 +526,10 @@ public class FloatingButtonService extends Service {
             @Override
             public void onClick(View v) {
                 etText1.setText("");
-                etText2.setText("");
+                if (etRightInput != null) {
+                    etRightInput.setText("");
+                }
+                disableRightInputBox();
                 Toast.makeText(FloatingButtonService.this, "Cleared", Toast.LENGTH_SHORT).show();
             }
         });
@@ -319,6 +554,9 @@ public class FloatingButtonService extends Service {
                 }
             }
         }, 100);
+        
+        // Initially disable right input box
+        disableRightInputBox();
     }
     
     private void autoPopulateFromClipboard() {
@@ -342,23 +580,10 @@ public class FloatingButtonService extends Service {
         int newRowIndex = dataManager.createNewActiveRow(bankName, applicantName, reasonOfCNV);
         updatePopupPreview();
         
+        // Show and enable right input box
+        showRightInputBox();
+        
         Toast.makeText(this, "Row #" + (newRowIndex + 1) + " created", Toast.LENGTH_SHORT).show();
-    }
-    
-    private void processText2(String text) {
-        if (!dataManager.hasActiveRow()) {
-            Toast.makeText(this, "Add WhatsApp text first!", Toast.LENGTH_LONG).show();
-            etText2.setText("");
-            return;
-        }
-        
-        String longitude = text.trim();
-        
-        boolean success = dataManager.updateActiveRowWithText2(longitude);
-        if (success) {
-            updatePopupPreview();
-            Toast.makeText(this, "Coordinates added", Toast.LENGTH_SHORT).show();
-        }
     }
     
     private void updatePopupPreview() {
@@ -383,7 +608,8 @@ public class FloatingButtonService extends Service {
         preview.append("Bank: ").append(activeRow.bankName.isEmpty() ? "-" : activeRow.bankName).append("\n");
         preview.append("Name: ").append(activeRow.applicantName.isEmpty() ? "-" : activeRow.applicantName).append("\n");
         preview.append("Reason: ").append(activeRow.reasonOfCNV.isEmpty() ? "-" : activeRow.reasonOfCNV).append("\n");
-        preview.append("Coords: ").append(activeRow.longitude.isEmpty() ? "-" : activeRow.longitude);
+        preview.append("Coords: ").append(activeRow.longitude.isEmpty() ? "-" : activeRow.longitude).append("\n");
+        preview.append("Area: ").append(activeRow.area.isEmpty() ? "-" : activeRow.area);
         
         tvPreview.setText(preview.toString());
     }
@@ -437,6 +663,12 @@ public class FloatingButtonService extends Service {
         }
         if (overlayPopup != null) {
             windowManager.removeView(overlayPopup);
+        }
+        if (closeTarget != null) {
+            windowManager.removeView(closeTarget);
+        }
+        if (rightInputBox != null) {
+            windowManager.removeView(rightInputBox);
         }
     }
 }
