@@ -114,7 +114,7 @@
         </LinearLayout>
     </LinearLayout>
     
-    <!-- Main Content Area - Table Only -->
+    <!-- Main Content Area - Excel Table -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -165,7 +165,7 @@
                 android:textColor="#757575"/>
         </LinearLayout>
         
-        <!-- Scrollable Table Container -->
+        <!-- Scrollable Excel Table Container -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -175,6 +175,7 @@
             android:padding="2dp">
             
             <HorizontalScrollView
+                android:id="@+id/horizontalScroll"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:fillViewport="false"
@@ -182,18 +183,450 @@
                 android:fadeScrollbars="false">
                 
                 <ScrollView
+                    android:id="@+id/verticalScroll"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:fillViewport="false"
                     android:scrollbars="vertical"
                     android:fadeScrollbars="false">
                     
-                    <TableLayout
-                        android:id="@+id/tableLayout"
+                    <!-- Excel Table Structure -->
+                    <LinearLayout
+                        android:id="@+id/excelTableContainer"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:background="#FFFFFF"
-                        android:stretchColumns="*"/>
+                        android:orientation="vertical"
+                        android:background="#FFFFFF">
+
+                        <!-- Row 1: Header Row with Merged Cells -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="26dp"
+                            android:orientation="horizontal">
+                            
+                            <!-- A1-F1 Merged: FIELD EXECUTIVE NAME:- -->
+                            <EditText
+                                android:id="@+id/cellA1F1"
+                                android:layout_width="340dp"
+                                android:layout_height="match_parent"
+                                android:text="FIELD EXECUTIVE NAME:-"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:textColor="#000000"
+                                android:gravity="center_vertical|start"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="4dp"
+                                android:background="@drawable/excel_cell_border"
+                                android:inputType="text"
+                                android:singleLine="true"/>
+                            
+                            <!-- G1-I1 Merged: DATE:- -->
+                            <EditText
+                                android:id="@+id/cellG1I1"
+                                android:layout_width="177dp"
+                                android:layout_height="match_parent"
+                                android:text="DATE:-"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:textColor="#000000"
+                                android:gravity="center_vertical|start"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="4dp"
+                                android:background="@drawable/excel_cell_border"
+                                android:inputType="text"
+                                android:singleLine="true"/>
+                        </LinearLayout>
+
+                        <!-- Row 2: Column Headers -->
+                        <LinearLayout
+                            android:id="@+id/row2Headers"
+                            android:layout_width="wrap_content"
+                            android:layout_height="24dp"
+                            android:orientation="horizontal">
+                            
+                            <!-- A2: SR NO -->
+                            <TextView
+                                android:layout_width="34dp"
+                                android:layout_height="match_parent"
+                                android:text="SR NO"
+                                android:textSize="8sp"
+                                android:textStyle="bold"
+                                android:textColor="#000000"
+                                android:gravity="center"
+                                android:background="@drawable/excel_cell_border"/>
+                            
+                            <!-- B2: BANK NAME -->
+                            <TextView
+                                android:layout_width="62dp"
+                                android:layout_height="match_parent"
+                                android:text="BANK NAME"
+                                android:textSize="7sp"
+                                android:textStyle="bold"
+                                android:textColor="#000000"
+                                android:gravity="center"
+                                android:background="@drawable/excel_cell_border"/>
+                            
+                            <!-- C2: APPLICANT NAME -->
+                            <TextView
+                                android:layout_width="169dp"
+                                android:layout_height="match_parent"
+                                android:text="APPLICANT NAME"
+                                android:textSize="8sp"
+                                android:textStyle="bold"
+                                android:textColor="#000000"
+                                android:gravity="center"
+                                android:background="@drawable/excel_cell_border"/>
+                            
+                            <!-- D2: STATUS -->
+                            <TextView
+                                android:layout_width="30dp"
+                                android:layout_height="match_parent"
+                                android:text="STATUS"
+                                android:textSize="6sp"
+                                android:textStyle="bold"
+                                android:textColor="#000000"
+                                android:gravity="center"
+                                android:background="@drawable/excel_cell_border"/>
+                            
+                            <!-- E2: REASON FOR CNV -->
+                            <TextView
+                                android:layout_width="45dp"
+                                android:layout_height="match_parent"
+                                android:text="REASON FOR CNV"
+                                android:textSize="5sp"
+                                android:textStyle="bold"
+                                android:textColor="#000000"
+                                android:gravity="center"
+                                android:maxLines="2"
+                                android:background="@drawable/excel_cell_border"/>
+                            
+                            <!-- F2: LAT-LONG FROM -->
+                            <TextView
+                                android:layout_width="92dp"
+                                android:layout_height="match_parent"
+                                android:text="LAT-LONG FROM"
+                                android:textSize="7sp"
+                                android:textStyle="bold"
+                                android:textColor="#000000"
+                                android:gravity="center"
+                                android:background="@drawable/excel_cell_border"/>
+                            
+                            <!-- G2: LAT-LONG TO -->
+                            <TextView
+                                android:layout_width="95dp"
+                                android:layout_height="match_parent"
+                                android:text="LAT-LONG TO"
+                                android:textSize="7sp"
+                                android:textStyle="bold"
+                                android:textColor="#000000"
+                                android:gravity="center"
+                                android:background="@drawable/excel_cell_border"/>
+                            
+                            <!-- H2: AREA -->
+                            <TextView
+                                android:layout_width="89dp"
+                                android:layout_height="match_parent"
+                                android:text="AREA"
+                                android:textSize="9sp"
+                                android:textStyle="bold"
+                                android:textColor="#000000"
+                                android:gravity="center"
+                                android:background="@drawable/excel_cell_border"/>
+                            
+                            <!-- I2: KM -->
+                            <TextView
+                                android:layout_width="38dp"
+                                android:layout_height="match_parent"
+                                android:text="KM"
+                                android:textSize="9sp"
+                                android:textStyle="bold"
+                                android:textColor="#000000"
+                                android:gravity="center"
+                                android:background="@drawable/excel_cell_border"/>
+                        </LinearLayout>
+
+                        <!-- Data Rows Container (Row 3-12) - 10 rows, height 20.25dp each -->
+                        <LinearLayout
+                            android:id="@+id/dataRowsContainer"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"/>
+
+                        <!-- Additional Rows Container (Row 13-17) - 5 rows, height 15dp each -->
+                        <LinearLayout
+                            android:id="@+id/additionalRowsContainer"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"/>
+
+                        <!-- Row 18: Blank Spacing Row -->
+                        <View
+                            android:layout_width="654dp"
+                            android:layout_height="12dp"
+                            android:background="@drawable/excel_cell_border"/>
+
+                        <!-- Bottom Summary Table (Row 19-24) -->
+                        <LinearLayout
+                            android:id="@+id/summaryTableContainer"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+                            
+                            <!-- Row 19: Headers for Summary -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="17dp"
+                                android:orientation="horizontal">
+                                
+                                <!-- Spacer for columns A-E -->
+                                <View
+                                    android:layout_width="340dp"
+                                    android:layout_height="match_parent"/>
+                                
+                                <!-- F19: Blank -->
+                                <TextView
+                                    android:layout_width="92dp"
+                                    android:layout_height="match_parent"
+                                    android:text=""
+                                    android:background="@drawable/excel_cell_border"/>
+                                
+                                <!-- G19: NO. OF COUNT -->
+                                <TextView
+                                    android:layout_width="95dp"
+                                    android:layout_height="match_parent"
+                                    android:text="NO. OF COUNT"
+                                    android:textSize="7sp"
+                                    android:textStyle="bold"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"/>
+                                
+                                <!-- H19: AMOUNT -->
+                                <TextView
+                                    android:layout_width="127dp"
+                                    android:layout_height="match_parent"
+                                    android:text="AMOUNT"
+                                    android:textSize="8sp"
+                                    android:textStyle="bold"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"/>
+                            </LinearLayout>
+                            
+                            <!-- Row 20: TOTAL KM -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="25dp"
+                                android:orientation="horizontal">
+                                
+                                <View
+                                    android:layout_width="340dp"
+                                    android:layout_height="match_parent"/>
+                                
+                                <TextView
+                                    android:layout_width="92dp"
+                                    android:layout_height="match_parent"
+                                    android:text="TOTAL KM"
+                                    android:textSize="8sp"
+                                    android:textStyle="bold"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"/>
+                                
+                                <EditText
+                                    android:id="@+id/cellG20"
+                                    android:layout_width="95dp"
+                                    android:layout_height="match_parent"
+                                    android:text=""
+                                    android:textSize="9sp"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"
+                                    android:inputType="numberDecimal"
+                                    android:singleLine="true"/>
+                                
+                                <EditText
+                                    android:id="@+id/cellH20"
+                                    android:layout_width="127dp"
+                                    android:layout_height="match_parent"
+                                    android:text=""
+                                    android:textSize="9sp"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"
+                                    android:inputType="numberDecimal"
+                                    android:singleLine="true"/>
+                            </LinearLayout>
+                            
+                            <!-- Row 21: LUNCH -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="25dp"
+                                android:orientation="horizontal">
+                                
+                                <View
+                                    android:layout_width="340dp"
+                                    android:layout_height="match_parent"/>
+                                
+                                <TextView
+                                    android:layout_width="92dp"
+                                    android:layout_height="match_parent"
+                                    android:text="LUNCH"
+                                    android:textSize="8sp"
+                                    android:textStyle="bold"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"/>
+                                
+                                <EditText
+                                    android:id="@+id/cellG21"
+                                    android:layout_width="95dp"
+                                    android:layout_height="match_parent"
+                                    android:text=""
+                                    android:textSize="9sp"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"
+                                    android:inputType="number"
+                                    android:singleLine="true"/>
+                                
+                                <EditText
+                                    android:id="@+id/cellH21"
+                                    android:layout_width="127dp"
+                                    android:layout_height="match_parent"
+                                    android:text=""
+                                    android:textSize="9sp"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"
+                                    android:inputType="numberDecimal"
+                                    android:singleLine="true"/>
+                            </LinearLayout>
+                            
+                            <!-- Row 22: VISIT -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="25dp"
+                                android:orientation="horizontal">
+                                
+                                <View
+                                    android:layout_width="340dp"
+                                    android:layout_height="match_parent"/>
+                                
+                                <TextView
+                                    android:layout_width="92dp"
+                                    android:layout_height="match_parent"
+                                    android:text="VISIT"
+                                    android:textSize="8sp"
+                                    android:textStyle="bold"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"/>
+                                
+                                <EditText
+                                    android:id="@+id/cellG22"
+                                    android:layout_width="95dp"
+                                    android:layout_height="match_parent"
+                                    android:text=""
+                                    android:textSize="9sp"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"
+                                    android:inputType="number"
+                                    android:singleLine="true"/>
+                                
+                                <EditText
+                                    android:id="@+id/cellH22"
+                                    android:layout_width="127dp"
+                                    android:layout_height="match_parent"
+                                    android:text=""
+                                    android:textSize="9sp"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"
+                                    android:inputType="numberDecimal"
+                                    android:singleLine="true"/>
+                            </LinearLayout>
+                            
+                            <!-- Row 23: OTHER -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="26dp"
+                                android:orientation="horizontal">
+                                
+                                <View
+                                    android:layout_width="340dp"
+                                    android:layout_height="match_parent"/>
+                                
+                                <TextView
+                                    android:layout_width="92dp"
+                                    android:layout_height="match_parent"
+                                    android:text="OTHER"
+                                    android:textSize="8sp"
+                                    android:textStyle="bold"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"/>
+                                
+                                <EditText
+                                    android:id="@+id/cellG23"
+                                    android:layout_width="95dp"
+                                    android:layout_height="match_parent"
+                                    android:text=""
+                                    android:textSize="9sp"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"
+                                    android:inputType="number"
+                                    android:singleLine="true"/>
+                                
+                                <EditText
+                                    android:id="@+id/cellH23"
+                                    android:layout_width="127dp"
+                                    android:layout_height="match_parent"
+                                    android:text=""
+                                    android:textSize="9sp"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"
+                                    android:inputType="numberDecimal"
+                                    android:singleLine="true"/>
+                            </LinearLayout>
+                            
+                            <!-- Row 24: TOTAL AMOUNT (F24+G24 Merged) -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="15dp"
+                                android:orientation="horizontal">
+                                
+                                <View
+                                    android:layout_width="340dp"
+                                    android:layout_height="match_parent"/>
+                                
+                                <!-- F24+G24 Merged: TOTAL AMOUNT -->
+                                <TextView
+                                    android:layout_width="187dp"
+                                    android:layout_height="match_parent"
+                                    android:text="TOTAL AMOUNT"
+                                    android:textSize="8sp"
+                                    android:textStyle="bold"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"/>
+                                
+                                <TextView
+                                    android:id="@+id/cellH24"
+                                    android:layout_width="127dp"
+                                    android:layout_height="match_parent"
+                                    android:text=""
+                                    android:textSize="9sp"
+                                    android:textStyle="bold"
+                                    android:textColor="#000000"
+                                    android:gravity="center"
+                                    android:background="@drawable/excel_cell_border"/>
+                            </LinearLayout>
+                        </LinearLayout>
+                    </LinearLayout>
                     
                 </ScrollView>
             </HorizontalScrollView>
