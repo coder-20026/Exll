@@ -74,6 +74,9 @@
     <color name="colorInputBorder">#E0E0E0</color>
     <color name="colorInputBorderFocused">#7C4DFF</color>
     
+    <!-- Launcher Icon -->
+    <color name="ic_launcher_background">#1A237E</color>
+    
     <!-- Semi-transparent Colors -->
     <color name="colorOverlay">#80000000</color>
     <color name="colorRipple">#40FFFFFF</color>
