@@ -68,8 +68,11 @@ public class FloatingButtonService extends Service {
     private ClipboardManager clipboardManager;
     private ClipboardManager.OnPrimaryClipChangedListener clipListener;
     private String lastClipboardText = "";
+    private String lastProcessedText = "";  // To prevent duplicate entries
+    private String initialClipboardText = "";  // Store clipboard text at enable time
     private Handler clipboardHandler;
     private Runnable clipboardRunnable;
+    private boolean isInitialized = false;  // Flag to ignore initial clipboard
     
     // State
     private boolean isLivePreviewShowing = false;
@@ -146,6 +149,28 @@ public class FloatingButtonService extends Service {
         clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         clipboardHandler = new Handler();
         
+        // Store current clipboard text at enable time - we will IGNORE this
+        try {
+            if (clipboardManager != null && clipboardManager.hasPrimaryClip()) {
+                ClipData clipData = clipboardManager.getPrimaryClip();
+                if (clipData != null && clipData.getItemCount() > 0) {
+                    CharSequence text = clipData.getItemAt(0).getText();
+                    if (text != null) {
+                        initialClipboardText = text.toString().trim();
+                        lastClipboardText = initialClipboardText;  // Mark as already seen
+                    }
+                }
+            }
+        } catch (Exception e) {}
+        
+        // Mark as initialized after short delay to ignore initial clipboard
+        clipboardHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                isInitialized = true;
+            }
+        }, 500);
+        
         // Poll clipboard every 500ms (more reliable than listener on some devices)
         clipboardRunnable = new Runnable() {
             @Override
@@ -154,19 +179,23 @@ public class FloatingButtonService extends Service {
                 clipboardHandler.postDelayed(this, 500);
             }
         };
-        clipboardHandler.postDelayed(clipboardRunnable, 500);
+        clipboardHandler.postDelayed(clipboardRunnable, 1000);  // Start after 1 second
         
         // Also use listener as backup
         clipListener = new ClipboardManager.OnPrimaryClipChangedListener() {
             @Override
             public void onPrimaryClipChanged() {
-                checkClipboard();
+                if (isInitialized) {
+                    checkClipboard();
+                }
             }
         };
         clipboardManager.addPrimaryClipChangedListener(clipListener);
     }
     
     private void checkClipboard() {
+        if (!isInitialized) return;  // Don't process until initialized
+        
         try {
             if (clipboardManager != null && clipboardManager.hasPrimaryClip()) {
                 ClipData clipData = clipboardManager.getPrimaryClip();
@@ -174,11 +203,25 @@ public class FloatingButtonService extends Service {
                     CharSequence text = clipData.getItemAt(0).getText();
                     if (text != null && text.length() > 0) {
                         String newText = text.toString().trim();
-                        // Only process if text is different and not empty
-                        if (!newText.equals(lastClipboardText) && !newText.isEmpty()) {
-                            lastClipboardText = newText;
-                            onClipboardTextDetected(newText);
+                        
+                        // Skip if same as initial clipboard (old data)
+                        if (newText.equals(initialClipboardText)) {
+                            return;
                         }
+                        
+                        // Skip if same as last clipboard text
+                        if (newText.equals(lastClipboardText)) {
+                            return;
+                        }
+                        
+                        // Skip if already processed (duplicate prevention)
+                        if (newText.equals(lastProcessedText)) {
+                            return;
+                        }
+                        
+                        // Valid new text - process it
+                        lastClipboardText = newText;
+                        onClipboardTextDetected(newText);
                     }
                 }
             }
@@ -188,6 +231,9 @@ public class FloatingButtonService extends Service {
     }
     
     private void onClipboardTextDetected(String text) {
+        // Mark this text as processed to prevent duplicates
+        lastProcessedText = text;
+        
         // Make bubble look blurred/dim
         setBubbleBlurred(true);
         
@@ -381,14 +427,9 @@ public class FloatingButtonService extends Service {
         );
         
         livePreviewParams.gravity = Gravity.TOP | Gravity.START;
-        // Position near bubble but not overlapping
-        livePreviewParams.x = buttonParams.x + 70;
-        livePreviewParams.y = buttonParams.y;
-        
-        // Make sure it's within screen bounds
-        if (livePreviewParams.x + 260 > screenWidth) {
-            livePreviewParams.x = screenWidth - 270;
-        }
+        // Default position: Top-left corner of screen
+        livePreviewParams.x = 10;
+        livePreviewParams.y = 50;
         
         windowManager.addView(livePreviewPopup, livePreviewParams);
         isLivePreviewShowing = true;
@@ -524,28 +565,35 @@ public class FloatingButtonService extends Service {
             dataManager.updateRow(dataManager.getActiveRowIndex(), activeRow);
             dataManager.lockActiveRow();
             
-            Toast.makeText(this, "Entry saved! Row #" + (dataManager.getActiveRowIndex() + 1), Toast.LENGTH_SHORT).show();
+            int savedRowNum = dataManager.getActiveRowIndex() + 1;
+            Toast.makeText(this, "Saved Row #" + savedRowNum, Toast.LENGTH_SHORT).show();
             
-            // Reset for next entry
-            resetLivePreview();
+            // Clear fields but KEEP popup visible (don't close it)
+            clearLivePreviewFieldsAndReset();
             setBubbleBlurred(false);
         }
     }
     
-    private void resetLivePreview() {
+    private void clearLivePreviewFieldsAndReset() {
+        // Clear all fields - popup stays visible
         if (etLiveBank != null) etLiveBank.setText("");
         if (etLiveName != null) etLiveName.setText("");
         if (etLiveReason != null) etLiveReason.setText("");
         if (etLiveCoords != null) etLiveCoords.setText("");
         if (etLiveArea != null) etLiveArea.setText("");
-        if (tvRowNumber != null) tvRowNumber.setText("");
+        if (tvRowNumber != null) tvRowNumber.setText("Ready");
         
-        // Hide the popup but keep it ready
+        // Reset processed text so same text CAN be processed again if copied again
+        lastProcessedText = "";
+    }
+    
+    private void resetLivePreview() {
+        // This is called when close (X) button is pressed - hide popup
         closeLivePreview();
         setBubbleBlurred(false);
         
-        // Reset last clipboard text so same text can trigger again if copied again
-        lastClipboardText = "";
+        // Reset tracking so new text can trigger again
+        lastProcessedText = "";
     }
     
     private void clearLivePreviewFields() {
