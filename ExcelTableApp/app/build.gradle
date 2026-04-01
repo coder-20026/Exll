@@ -1,0 +1,64 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 33
+    buildToolsVersion "33.0.2"
+    
+    defaultConfig {
+        applicationId "com.whtstable.master"
+        minSdkVersion 21
+        targetSdkVersion 33
+        versionCode 2
+        versionName "2.0.0"
+        
+        // Vector drawable support
+        vectorDrawables.useSupportLibrary = true
+    }
+    
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+            debuggable true
+        }
+    }
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    
+    lintOptions {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+    
+    // Enable view binding (optional but recommended)
+    buildFeatures {
+        viewBinding false
+    }
+    
+    // Namespace for Android Gradle Plugin 8+
+    namespace "com.whtstable.master"
+}
+
+dependencies {
+    // Material Design Components
+    implementation 'com.google.android.material:material:1.9.0'
+    
+    // AppCompat for backward compatibility
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    
+    // ConstraintLayout for complex layouts
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    
+    // CardView for card-style UI
+    implementation 'androidx.cardview:cardview:1.0.0'
+    
+    // Core KTX (optional but useful)
+    implementation 'androidx.core:core:1.10.1'
+}

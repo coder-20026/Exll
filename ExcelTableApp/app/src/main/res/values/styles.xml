@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    
+    <!-- Base Application Theme - Premium Material Design -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:windowBackground">@color/colorBackground</item>
+        <item name="android:statusBarColor">@color/colorPrimaryDark</item>
+        <item name="android:navigationBarColor">@color/colorPrimary</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+    
+    <!-- Premium Button Styles -->
+    <style name="PremiumButton">
+        <item name="android:textColor">@color/colorTextOnPrimary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+        <item name="android:elevation">4dp</item>
+    </style>
+    
+    <style name="PremiumButton.Primary">
+        <item name="android:background">@drawable/btn_primary_bg</item>
+    </style>
+    
+    <style name="PremiumButton.Secondary">
+        <item name="android:background">@drawable/btn_secondary_bg</item>
+    </style>
+    
+    <style name="PremiumButton.Success">
+        <item name="android:background">@drawable/btn_success_bg</item>
+    </style>
+    
+    <style name="PremiumButton.Danger">
+        <item name="android:background">@drawable/btn_danger_bg</item>
+    </style>
+    
+    <style name="PremiumButton.Warning">
+        <item name="android:background">@drawable/btn_warning_bg</item>
+    </style>
+    
+    <!-- Card Style -->
+    <style name="PremiumCard">
+        <item name="android:background">@drawable/card_bg</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:elevation">4dp</item>
+    </style>
+    
+    <!-- Input Field Style -->
+    <style name="PremiumInput">
+        <item name="android:background">@drawable/input_bg</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/colorTextSecondary</item>
+        <item name="android:textColorHint">@color/colorTextHint</item>
+    </style>
+    
+    <!-- Header Text Style -->
+    <style name="HeaderText">
+        <item name="android:textSize">22sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/colorTextOnPrimary</item>
+        <item name="android:letterSpacing">0.05</item>
+    </style>
+    
+    <!-- Subheader Text Style -->
+    <style name="SubheaderText">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/colorTextLight</item>
+    </style>
+    
+    <!-- Label Text Style -->
+    <style name="LabelText">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/colorTextPrimary</item>
+    </style>
+    
+    <!-- Table Header Style -->
+    <style name="TableHeader">
+        <item name="android:background">@drawable/table_header_bg</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:textColor">@color/colorTableHeaderText</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    
+    <!-- Table Cell Style -->
+    <style name="TableCell">
+        <item name="android:background">@drawable/table_cell_border</item>
+        <item name="android:padding">10dp</item>
+        <item name="android:textColor">@color/colorTextSecondary</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+    
+    <!-- Floating Button Style -->
+    <style name="FloatingButton">
+        <item name="android:background">@drawable/floating_button_bg</item>
+        <item name="android:elevation">12dp</item>
+    </style>
+    
+    <!-- Popup Style -->
+    <style name="PopupStyle">
+        <item name="android:background">@drawable/popup_bg</item>
+        <item name="android:elevation">24dp</item>
+    </style>
+    
+    <!-- Instruction Card Style -->
+    <style name="InstructionCard">
+        <item name="android:background">@drawable/instruction_card_bg</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:textColor">@color/colorInstructionText</item>
+        <item name="android:textSize">11sp</item>
+    </style>
+    
+</resources>

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Brand Colors - Premium Deep Purple/Indigo Theme -->
+    <color name="colorPrimary">#1A237E</color>
+    <color name="colorPrimaryDark">#0D1259</color>
+    <color name="colorPrimaryLight">#283593</color>
+    <color name="colorAccent">#7C4DFF</color>
+    <color name="colorAccentDark">#651FFF</color>
+    <color name="colorAccentLight">#B388FF</color>
+    
+    <!-- Secondary Colors -->
+    <color name="colorSecondary">#00BCD4</color>
+    <color name="colorSecondaryDark">#00ACC1</color>
+    <color name="colorSecondaryLight">#4DD0E1</color>
+    
+    <!-- Status Colors -->
+    <color name="colorSuccess">#4CAF50</color>
+    <color name="colorSuccessDark">#43A047</color>
+    <color name="colorWarning">#FF9800</color>
+    <color name="colorWarningDark">#FB8C00</color>
+    <color name="colorDanger">#FF5252</color>
+    <color name="colorDangerDark">#F44336</color>
+    <color name="colorInfo">#2196F3</color>
+    <color name="colorInfoDark">#1E88E5</color>
+    
+    <!-- Background Colors -->
+    <color name="colorBackground">#F5F7FA</color>
+    <color name="colorBackgroundLight">#FFFFFF</color>
+    <color name="colorBackgroundDark">#E8EAF6</color>
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorSurfaceVariant">#F5F5F5</color>
+    
+    <!-- Text Colors -->
+    <color name="colorTextPrimary">#1A237E</color>
+    <color name="colorTextSecondary">#333333</color>
+    <color name="colorTextTertiary">#666666</color>
+    <color name="colorTextHint">#9E9E9E</color>
+    <color name="colorTextOnPrimary">#FFFFFF</color>
+    <color name="colorTextOnAccent">#FFFFFF</color>
+    
+    <!-- Border Colors -->
+    <color name="colorBorder">#E0E0E0</color>
+    <color name="colorBorderLight">#EEEEEE</color>
+    <color name="colorBorderDark">#BDBDBD</color>
+    
+    <!-- Table Colors -->
+    <color name="colorTableHeader">#1A237E</color>
+    <color name="colorTableHeaderText">#FFFFFF</color>
+    <color name="colorTableRow">#FFFFFF</color>
+    <color name="colorTableRowAlt">#FAFAFA</color>
+    <color name="colorTableRowSelected">#C5CAE9</color>
+    <color name="colorTableRowPressed">#E8EAF6</color>
+    <color name="colorTableBorder">#E0E0E0</color>
+    
+    <!-- Instruction Card -->
+    <color name="colorInstructionBg">#FFF8E1</color>
+    <color name="colorInstructionBgEnd">#FFECB3</color>
+    <color name="colorInstructionBorder">#FFD54F</color>
+    <color name="colorInstructionText">#5D4037</color>
+    
+    <!-- Floating Button -->
+    <color name="colorFloatingBg">#7C4DFF</color>
+    <color name="colorFloatingBgCenter">#651FFF</color>
+    <color name="colorFloatingBgEnd">#6200EA</color>
+    
+    <!-- Popup Colors -->
+    <color name="colorPopupBg">#FFFFFF</color>
+    <color name="colorPopupHeaderStart">#7C4DFF</color>
+    <color name="colorPopupHeaderEnd">#651FFF</color>
+    <color name="colorCloseButton">#FF5252</color>
+    
+    <!-- Input Field -->
+    <color name="colorInputBg">#F5F7FA</color>
+    <color name="colorInputBorder">#E0E0E0</color>
+    <color name="colorInputBorderFocused">#7C4DFF</color>
+    
+    <!-- Semi-transparent Colors -->
+    <color name="colorOverlay">#80000000</color>
+    <color name="colorRipple">#40FFFFFF</color>
+    <color name="colorShadow">#10000000</color>
+    <color name="colorTextLight">#B3FFFFFF</color>
+</resources>

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WhtsTable Master</string>
+    <string name="app_description">Premium WhatsApp Data Entry Tool</string>
+    
+    <!-- Button Labels -->
+    <string name="btn_enable_floating">Enable Quick Entry Mode</string>
+    <string name="btn_disable_floating">Disable Quick Entry Mode</string>
+    <string name="btn_parse">Parse &amp; Fill</string>
+    <string name="btn_copy_all">Copy All</string>
+    <string name="btn_clear">Clear</string>
+    <string name="btn_done">Save Entry</string>
+    <string name="btn_open_app">Open App</string>
+    
+    <!-- Hints -->
+    <string name="hint_text1">Paste WhatsApp text here...</string>
+    <string name="hint_text2">Paste coordinates or OCR text...</string>
+    <string name="hint_coordinates">22.1704,71.6677</string>
+    
+    <!-- Labels -->
+    <string name="label_whatsapp_text">WhatsApp Text</string>
+    <string name="label_ocr_text">OCR / Location Text</string>
+    <string name="label_required">(Required)</string>
+    <string name="label_optional">(Optional)</string>
+    <string name="label_preview">Live Preview</string>
+    <string name="label_coordinates">Coordinates</string>
+    
+    <!-- Messages -->
+    <string name="msg_waiting">Waiting for data...</string>
+    <string name="msg_entry_saved">Entry saved!</string>
+    <string name="msg_cleared">Inputs cleared</string>
+    <string name="msg_row_copied">Row copied! Paste in Excel</string>
+    <string name="msg_all_rows_copied">%d rows copied! Paste in Excel</string>
+    <string name="msg_no_data">No data to copy!</string>
+    <string name="msg_text1_required">WhatsApp text is required!</string>
+    <string name="msg_all_rows_filled">All rows filled! Delete a row first.</string>
+    <string name="msg_floating_enabled">Quick Entry enabled! Minimize app to use.</string>
+    <string name="msg_floating_disabled">Quick Entry disabled</string>
+    <string name="msg_permission_denied">Permission denied! Cannot show floating button.</string>
+    
+    <!-- Instructions -->
+    <string name="instructions">Paste text &#8594; Parse &#8594; Long-press row for options &#8594; Copy All for Excel</string>
+    <string name="popup_tip">Tip: Long press floating button to close it</string>
+    
+    <!-- Column Headers -->
+    <string name="col_bank_name">Bank Name</string>
+    <string name="col_applicant_name">Applicant Name</string>
+    <string name="col_status">Status</string>
+    <string name="col_reason">Reason of CNV</string>
+    <string name="col_latitude">Latitude</string>
+    <string name="col_longitude">Longitude</string>
+    <string name="col_area">Area</string>
+    <string name="col_km">KM</string>
+    
+    <!-- Dialog -->
+    <string name="dialog_row_options">Row %d Options</string>
+    <string name="dialog_edit_row">Edit Row %d</string>
+    <string name="dialog_delete_confirm">Are you sure you want to delete Row %d?</string>
+    <string name="option_edit">Edit Row</string>
+    <string name="option_delete">Delete Row</string>
+    <string name="option_move_up">Move Up</string>
+    <string name="option_move_down">Move Down</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
+</resources>
