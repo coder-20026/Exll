@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/livePreviewContainer"
+    android:layout_width="260dp"
+    android:layout_height="wrap_content"
+    android:maxHeight="400dp"
+    android:orientation="vertical"
+    android:background="@drawable/popup_bg"
+    android:elevation="24dp">
+    
+    <!-- Premium Header - Draggable -->
+    <RelativeLayout
+        android:id="@+id/livePreviewHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/popup_header_bg"
+        android:padding="10dp">
+        
+        <TextView
+            android:id="@+id/tvLivePreviewTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Live Preview"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.02"
+            android:layout_centerVertical="true"/>
+        
+        <TextView
+            android:id="@+id/tvRowNumber"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="#E0FFFFFF"
+            android:textSize="10sp"
+            android:layout_toEndOf="@id/tvLivePreviewTitle"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="8dp"/>
+        
+        <!-- Close Button -->
+        <TextView
+            android:id="@+id/btnCloseLivePreview"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:text="&#10005;"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:gravity="center"
+            android:background="@drawable/close_btn_bg"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:elevation="4dp"/>
+    </RelativeLayout>
+    
+    <!-- Scrollable Content Area -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fillViewport="false"
+        android:scrollbars="vertical"
+        android:fadeScrollbars="false">
+        
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="10dp">
+            
+            <!-- Bank Field -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Bank"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="#1A237E"
+                android:layout_marginBottom="2dp"/>
+            
+            <EditText
+                android:id="@+id/etLiveBank"
+                android:layout_width="match_parent"
+                android:layout_height="32dp"
+                android:hint="Auto-parsed"
+                android:textSize="11sp"
+                android:textColor="#333333"
+                android:textColorHint="#9E9E9E"
+                android:padding="6dp"
+                android:background="@drawable/input_bg"
+                android:inputType="text"
+                android:singleLine="true"
+                android:layout_marginBottom="6dp"/>
+            
+            <!-- Name Field -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Name"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="#1A237E"
+                android:layout_marginBottom="2dp"/>
+            
+            <EditText
+                android:id="@+id/etLiveName"
+                android:layout_width="match_parent"
+                android:layout_height="32dp"
+                android:hint="Auto-parsed"
+                android:textSize="11sp"
+                android:textColor="#333333"
+                android:textColorHint="#9E9E9E"
+                android:padding="6dp"
+                android:background="@drawable/input_bg"
+                android:inputType="text"
+                android:singleLine="true"
+                android:layout_marginBottom="6dp"/>
+            
+            <!-- Reason Field -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Reason"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="#1A237E"
+                android:layout_marginBottom="2dp"/>
+            
+            <EditText
+                android:id="@+id/etLiveReason"
+                android:layout_width="match_parent"
+                android:layout_height="32dp"
+                android:hint="Auto-parsed"
+                android:textSize="11sp"
+                android:textColor="#333333"
+                android:textColorHint="#9E9E9E"
+                android:padding="6dp"
+                android:background="@drawable/input_bg"
+                android:inputType="text"
+                android:singleLine="true"
+                android:layout_marginBottom="6dp"/>
+            
+            <!-- Coords Field (Manual) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Coords"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="#1A237E"
+                android:layout_marginBottom="2dp"/>
+            
+            <EditText
+                android:id="@+id/etLiveCoords"
+                android:layout_width="match_parent"
+                android:layout_height="32dp"
+                android:hint="22.1234,71.1234"
+                android:textSize="11sp"
+                android:textColor="#333333"
+                android:textColorHint="#9E9E9E"
+                android:padding="6dp"
+                android:background="@drawable/input_bg"
+                android:inputType="text"
+                android:singleLine="true"
+                android:layout_marginBottom="6dp"/>
+            
+            <!-- Area Field (Manual) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Area"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="#1A237E"
+                android:layout_marginBottom="2dp"/>
+            
+            <EditText
+                android:id="@+id/etLiveArea"
+                android:layout_width="match_parent"
+                android:layout_height="32dp"
+                android:hint="Ahmedabad"
+                android:textSize="11sp"
+                android:textColor="#333333"
+                android:textColorHint="#9E9E9E"
+                android:padding="6dp"
+                android:background="@drawable/input_bg"
+                android:inputType="text"
+                android:singleLine="true"
+                android:layout_marginBottom="10dp"/>
+            
+            <!-- Action Buttons Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                
+                <Button
+                    android:id="@+id/btnLiveOk"
+                    android:layout_width="0dp"
+                    android:layout_height="38dp"
+                    android:layout_weight="2"
+                    android:text="OK - Save"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:textAllCaps="false"
+                    android:background="@drawable/btn_success_bg"
+                    android:layout_marginEnd="4dp"
+                    android:elevation="3dp"/>
+                
+                <Button
+                    android:id="@+id/btnLiveClear"
+                    android:layout_width="0dp"
+                    android:layout_height="38dp"
+                    android:layout_weight="1"
+                    android:text="Clear"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:textAllCaps="false"
+                    android:background="@drawable/btn_warning_bg"
+                    android:layout_marginStart="4dp"
+                    android:elevation="3dp"/>
+            </LinearLayout>
+            
+            <!-- Help Text -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Drag header to move | Drop on X to close"
+                android:textSize="8sp"
+                android:textColor="#9E9E9E"
+                android:gravity="center"
+                android:paddingTop="6dp"/>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
+
