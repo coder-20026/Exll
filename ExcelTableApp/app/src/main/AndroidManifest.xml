@@ -31,6 +31,14 @@
             </intent-filter>
         </activity>
         
+        <!-- History Activity -->
+        <activity 
+            android:name=".HistoryActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
+            android:parentActivityName=".MainActivity"/>
+        
         <!-- Floating Button Service -->
         <service 
             android:name=".FloatingButtonService"
