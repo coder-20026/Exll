@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rightInputContainer"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@drawable/popup_bg"
+    android:padding="8dp"
+    android:elevation="12dp"
+    android:gravity="center_vertical">
+    
+    <!-- Multi-line Input Box -->
+    <EditText
+        android:id="@+id/etRightInput"
+        android:layout_width="140dp"
+        android:layout_height="60dp"
+        android:hint="22.1234,71.1234&#10;Ahmedabad"
+        android:textSize="11sp"
+        android:textColor="#333333"
+        android:textColorHint="#9E9E9E"
+        android:padding="8dp"
+        android:background="@drawable/input_bg"
+        android:gravity="top|start"
+        android:inputType="textMultiLine"
+        android:lines="2"
+        android:maxLines="3"
+        android:scrollbars="vertical"/>
+    
+    <!-- OK Button -->
+    <Button
+        android:id="@+id/btnRightOk"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:text="OK"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:textAllCaps="false"
+        android:background="@drawable/btn_success_bg"
+        android:layout_marginStart="6dp"
+        android:elevation="3dp"
+        android:padding="0dp"/>
+    
+</LinearLayout>
