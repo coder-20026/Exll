@@ -1,5 +1,4 @@
 // WhtsTable Master - Premium Android App
-// Settings Configuration
 
 pluginManagement {
     repositories {
@@ -14,10 +13,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url 'https://jitpack.io' }
     }
 }
 
-// Project Configuration
 rootProject.name = "WhtsTableMaster"
 include ':app'
