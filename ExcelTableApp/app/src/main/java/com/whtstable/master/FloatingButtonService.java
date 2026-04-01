@@ -13,8 +13,6 @@ import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -38,40 +36,43 @@ public class FloatingButtonService extends Service {
     
     private WindowManager windowManager;
     private View floatingButton;
-    private View overlayPopup;
+    private View livePreviewPopup;
     private View closeTarget;
-    private View rightInputBox;
     private WindowManager.LayoutParams buttonParams;
-    private WindowManager.LayoutParams popupParams;
+    private WindowManager.LayoutParams livePreviewParams;
     private WindowManager.LayoutParams closeTargetParams;
-    private WindowManager.LayoutParams rightInputParams;
     private DataManager dataManager;
     
+    // Bubble drag variables
     private int initialX, initialY;
     private float initialTouchX, initialTouchY;
-    private long touchStartTime;
-    private boolean isLongPress = false;
     private boolean isDragging = false;
     
-    // Popup drag variables
-    private int popupInitialX, popupInitialY;
-    private float popupInitialTouchX, popupInitialTouchY;
-    private boolean isPopupDragging = false;
-    private long popupTouchStartTime;
+    // Live Preview drag variables
+    private int previewInitialX, previewInitialY;
+    private float previewInitialTouchX, previewInitialTouchY;
+    private boolean isPreviewDragging = false;
     
-    // Popup views
-    private EditText etText1;
-    private TextView tvActiveRow, tvStatus, tvPreview, btnClosePopup;
-    private Button btnDone, btnClear, btnOpenApp;
-    
-    // Right input box views
-    private EditText etRightInput;
-    private Button btnRightOk;
-    private LinearLayout rightInputContainer;
+    // Live Preview views
+    private EditText etLiveBank, etLiveName, etLiveReason, etLiveCoords, etLiveArea;
+    private TextView tvRowNumber;
+    private Button btnLiveOk, btnLiveClear;
+    private LinearLayout livePreviewContainer;
     
     // Screen dimensions
     private int screenHeight;
-    private int closeTargetHeight = 150;
+    private int screenWidth;
+    private int closeTargetHeight = 120;
+    
+    // Clipboard monitoring
+    private ClipboardManager clipboardManager;
+    private ClipboardManager.OnPrimaryClipChangedListener clipListener;
+    private String lastClipboardText = "";
+    private Handler clipboardHandler;
+    private Runnable clipboardRunnable;
+    
+    // State
+    private boolean isLivePreviewShowing = false;
     
     @Override
     public IBinder onBind(Intent intent) {
@@ -85,10 +86,11 @@ public class FloatingButtonService extends Service {
         dataManager = DataManager.getInstance(this);
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         
-        // Get screen height
+        // Get screen dimensions
         android.util.DisplayMetrics metrics = new android.util.DisplayMetrics();
         windowManager.getDefaultDisplay().getMetrics(metrics);
         screenHeight = metrics.heightPixels;
+        screenWidth = metrics.widthPixels;
         
         // Start as foreground service for Android 8+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -97,7 +99,7 @@ public class FloatingButtonService extends Service {
         }
         
         createFloatingButton();
-        createRightInputBox();
+        setupClipboardMonitoring();
     }
     
     private void createNotificationChannel() {
@@ -133,11 +135,85 @@ public class FloatingButtonService extends Service {
         
         return builder
             .setContentTitle("WhtsTable Quick Entry")
-            .setContentText("Tap floating button to add entries")
+            .setContentText("Copy WhatsApp text - Live Preview appears")
             .setSmallIcon(android.R.drawable.ic_input_add)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build();
+    }
+    
+    private void setupClipboardMonitoring() {
+        clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        clipboardHandler = new Handler();
+        
+        // Poll clipboard every 500ms (more reliable than listener on some devices)
+        clipboardRunnable = new Runnable() {
+            @Override
+            public void run() {
+                checkClipboard();
+                clipboardHandler.postDelayed(this, 500);
+            }
+        };
+        clipboardHandler.postDelayed(clipboardRunnable, 500);
+        
+        // Also use listener as backup
+        clipListener = new ClipboardManager.OnPrimaryClipChangedListener() {
+            @Override
+            public void onPrimaryClipChanged() {
+                checkClipboard();
+            }
+        };
+        clipboardManager.addPrimaryClipChangedListener(clipListener);
+    }
+    
+    private void checkClipboard() {
+        try {
+            if (clipboardManager != null && clipboardManager.hasPrimaryClip()) {
+                ClipData clipData = clipboardManager.getPrimaryClip();
+                if (clipData != null && clipData.getItemCount() > 0) {
+                    CharSequence text = clipData.getItemAt(0).getText();
+                    if (text != null && text.length() > 0) {
+                        String newText = text.toString().trim();
+                        // Only process if text is different and not empty
+                        if (!newText.equals(lastClipboardText) && !newText.isEmpty()) {
+                            lastClipboardText = newText;
+                            onClipboardTextDetected(newText);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Silent fail - clipboard access can be restricted
+        }
+    }
+    
+    private void onClipboardTextDetected(String text) {
+        // Make bubble look blurred/dim
+        setBubbleBlurred(true);
+        
+        // Auto-parse the text
+        String bankName = extractBankName(text);
+        String applicantName = extractApplicantName(text);
+        String reasonOfCNV = extractReasonOfCNV(text);
+        
+        // Create new row in data manager
+        int newRowIndex = dataManager.createNewActiveRow(bankName, applicantName, reasonOfCNV);
+        
+        // Show live preview popup automatically
+        showLivePreview(bankName, applicantName, reasonOfCNV, newRowIndex);
+    }
+    
+    private void setBubbleBlurred(boolean blurred) {
+        if (floatingButton != null) {
+            ImageView btnImage = (ImageView) floatingButton.findViewById(R.id.floatingButton);
+            if (btnImage != null) {
+                if (blurred) {
+                    btnImage.setAlpha(0.5f);
+                } else {
+                    btnImage.setAlpha(1.0f);
+                }
+            }
+        }
     }
     
     private void createCloseTarget() {
@@ -145,12 +221,12 @@ public class FloatingButtonService extends Service {
         
         closeTarget = new TextView(this);
         TextView tv = (TextView) closeTarget;
-        tv.setText("✕ Close");
-        tv.setTextSize(18);
+        tv.setText("X Close");
+        tv.setTextSize(16);
         tv.setTextColor(0xFFFFFFFF);
         tv.setGravity(Gravity.CENTER);
         tv.setBackgroundColor(0xFFFF5252);
-        tv.setPadding(0, 30, 0, 30);
+        tv.setPadding(0, 20, 0, 20);
         
         int layoutType;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -174,7 +250,9 @@ public class FloatingButtonService extends Service {
     
     private void removeCloseTarget() {
         if (closeTarget != null) {
-            windowManager.removeView(closeTarget);
+            try {
+                windowManager.removeView(closeTarget);
+            } catch (Exception e) {}
             closeTarget = null;
         }
     }
@@ -210,7 +288,6 @@ public class FloatingButtonService extends Service {
             private Runnable longPressRunnable = new Runnable() {
                 @Override
                 public void run() {
-                    isLongPress = true;
                     isDragging = true;
                     createCloseTarget();
                 }
@@ -224,10 +301,8 @@ public class FloatingButtonService extends Service {
                         initialY = buttonParams.y;
                         initialTouchX = event.getRawX();
                         initialTouchY = event.getRawY();
-                        touchStartTime = System.currentTimeMillis();
-                        isLongPress = false;
                         isDragging = false;
-                        longPressHandler.postDelayed(longPressRunnable, 300);
+                        longPressHandler.postDelayed(longPressRunnable, 200);
                         return true;
                         
                     case MotionEvent.ACTION_MOVE:
@@ -236,20 +311,15 @@ public class FloatingButtonService extends Service {
                         
                         if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
                             isDragging = true;
-                            if (!isLongPress) {
-                                longPressHandler.removeCallbacks(longPressRunnable);
-                                createCloseTarget();
-                            }
+                            longPressHandler.removeCallbacks(longPressRunnable);
+                            createCloseTarget();
                         }
                         
                         buttonParams.x = initialX + deltaX;
                         buttonParams.y = initialY + deltaY;
                         windowManager.updateViewLayout(floatingButton, buttonParams);
                         
-                        // Update right input box position
-                        updateRightInputPosition();
-                        
-                        // Highlight close target if bubble is near bottom
+                        // Highlight close target if near bottom
                         if (closeTarget != null) {
                             int bubbleBottom = buttonParams.y + 60;
                             if (bubbleBottom > screenHeight - closeTargetHeight - 100) {
@@ -267,16 +337,13 @@ public class FloatingButtonService extends Service {
                         int bubbleBottom = buttonParams.y + 60;
                         if (isDragging && bubbleBottom > screenHeight - closeTargetHeight - 100) {
                             removeCloseTarget();
+                            closeLivePreview();
                             stopSelf();
                             Toast.makeText(FloatingButtonService.this, "Quick Entry closed", Toast.LENGTH_SHORT).show();
                             return true;
                         }
                         
                         removeCloseTarget();
-                        
-                        if (!isDragging && System.currentTimeMillis() - touchStartTime < 300) {
-                            openOverlayPopup();
-                        }
                         return true;
                 }
                 return false;
@@ -284,8 +351,19 @@ public class FloatingButtonService extends Service {
         });
     }
     
-    private void createRightInputBox() {
-        rightInputBox = LayoutInflater.from(this).inflate(R.layout.right_input_layout, null);
+    private void showLivePreview(String bank, String name, String reason, int rowIndex) {
+        if (livePreviewPopup != null) {
+            // Update existing popup
+            if (etLiveBank != null) etLiveBank.setText(bank);
+            if (etLiveName != null) etLiveName.setText(name);
+            if (etLiveReason != null) etLiveReason.setText(reason);
+            if (etLiveCoords != null) etLiveCoords.setText("");
+            if (etLiveArea != null) etLiveArea.setText("");
+            if (tvRowNumber != null) tvRowNumber.setText("Row #" + (rowIndex + 1));
+            return;
+        }
+        
+        livePreviewPopup = LayoutInflater.from(this).inflate(R.layout.live_preview_layout, null);
         
         int layoutType;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -294,7 +372,7 @@ public class FloatingButtonService extends Service {
             layoutType = WindowManager.LayoutParams.TYPE_PHONE;
         }
         
-        rightInputParams = new WindowManager.LayoutParams(
+        livePreviewParams = new WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             layoutType,
@@ -302,202 +380,90 @@ public class FloatingButtonService extends Service {
             PixelFormat.TRANSLUCENT
         );
         
-        rightInputParams.gravity = Gravity.TOP | Gravity.START;
-        rightInputParams.x = buttonParams.x + 70;
-        rightInputParams.y = buttonParams.y;
+        livePreviewParams.gravity = Gravity.TOP | Gravity.START;
+        // Position near bubble but not overlapping
+        livePreviewParams.x = buttonParams.x + 70;
+        livePreviewParams.y = buttonParams.y;
         
-        windowManager.addView(rightInputBox, rightInputParams);
+        // Make sure it's within screen bounds
+        if (livePreviewParams.x + 260 > screenWidth) {
+            livePreviewParams.x = screenWidth - 270;
+        }
         
-        rightInputContainer = (LinearLayout) rightInputBox.findViewById(R.id.rightInputContainer);
-        etRightInput = (EditText) rightInputBox.findViewById(R.id.etRightInput);
-        btnRightOk = (Button) rightInputBox.findViewById(R.id.btnRightOk);
+        windowManager.addView(livePreviewPopup, livePreviewParams);
+        isLivePreviewShowing = true;
         
-        // Initially hidden
-        rightInputContainer.setVisibility(View.GONE);
-        
-        btnRightOk.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                processRightInput();
-            }
-        });
+        initializeLivePreviewViews(bank, name, reason, rowIndex);
     }
     
-    private void updateRightInputPosition() {
-        if (rightInputBox != null && rightInputParams != null) {
-            rightInputParams.x = buttonParams.x + 70;
-            rightInputParams.y = buttonParams.y;
-            windowManager.updateViewLayout(rightInputBox, rightInputParams);
-        }
-    }
-    
-    private void showRightInputBox() {
-        if (rightInputContainer != null) {
-            rightInputContainer.setVisibility(View.VISIBLE);
-            rightInputContainer.setAlpha(1.0f);
-        }
-    }
-    
-    private void hideRightInputBox() {
-        if (rightInputContainer != null) {
-            rightInputContainer.setVisibility(View.GONE);
-        }
-    }
-    
-    private void disableRightInputBox() {
-        if (rightInputContainer != null) {
-            rightInputContainer.setVisibility(View.VISIBLE);
-            rightInputContainer.setAlpha(0.4f);
-            etRightInput.setEnabled(false);
-            btnRightOk.setEnabled(false);
-        }
-    }
-    
-    private void enableRightInputBox() {
-        if (rightInputContainer != null) {
-            rightInputContainer.setVisibility(View.VISIBLE);
-            rightInputContainer.setAlpha(1.0f);
-            etRightInput.setEnabled(true);
-            btnRightOk.setEnabled(true);
-        }
-    }
-    
-    private void processRightInput() {
-        if (!dataManager.hasActiveRow()) {
-            Toast.makeText(this, "Pehle WhatsApp text add karo!", Toast.LENGTH_LONG).show();
-            return;
-        }
+    private void initializeLivePreviewViews(String bank, String name, String reason, int rowIndex) {
+        livePreviewContainer = (LinearLayout) livePreviewPopup.findViewById(R.id.livePreviewContainer);
+        etLiveBank = (EditText) livePreviewPopup.findViewById(R.id.etLiveBank);
+        etLiveName = (EditText) livePreviewPopup.findViewById(R.id.etLiveName);
+        etLiveReason = (EditText) livePreviewPopup.findViewById(R.id.etLiveReason);
+        etLiveCoords = (EditText) livePreviewPopup.findViewById(R.id.etLiveCoords);
+        etLiveArea = (EditText) livePreviewPopup.findViewById(R.id.etLiveArea);
+        tvRowNumber = (TextView) livePreviewPopup.findViewById(R.id.tvRowNumber);
+        btnLiveOk = (Button) livePreviewPopup.findViewById(R.id.btnLiveOk);
+        btnLiveClear = (Button) livePreviewPopup.findViewById(R.id.btnLiveClear);
+        TextView btnClose = (TextView) livePreviewPopup.findViewById(R.id.btnCloseLivePreview);
+        View livePreviewHeader = livePreviewPopup.findViewById(R.id.livePreviewHeader);
         
-        String input = etRightInput.getText().toString().trim();
-        if (input.isEmpty()) {
-            Toast.makeText(this, "Coordinates aur Area enter karo!", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        // Set initial values
+        etLiveBank.setText(bank);
+        etLiveName.setText(name);
+        etLiveReason.setText(reason);
+        tvRowNumber.setText("Row #" + (rowIndex + 1));
         
-        // Parse input - Line 1: coordinates, Line 2: area
-        String[] lines = input.split("\n");
-        String longitude = "";
-        String area = "";
-        
-        if (lines.length >= 1) {
-            longitude = lines[0].trim();
-        }
-        if (lines.length >= 2) {
-            area = lines[1].trim();
-        }
-        
-        // Update active row with longitude and area
-        boolean success = dataManager.updateActiveRowWithCoordinatesAndArea(longitude, area);
-        if (success) {
-            dataManager.lockActiveRow();
-            Toast.makeText(this, "Entry saved!", Toast.LENGTH_SHORT).show();
-            etRightInput.setText("");
-            hideRightInputBox();
-            closeOverlayPopup();
-        } else {
-            Toast.makeText(this, "Error saving entry!", Toast.LENGTH_SHORT).show();
-        }
-    }
-    
-    private void openOverlayPopup() {
-        if (overlayPopup != null) {
-            updatePopupPreview();
-            return;
-        }
-        
-        overlayPopup = LayoutInflater.from(this).inflate(R.layout.overlay_popup_layout, null);
-        
-        int layoutType;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            layoutType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-        } else {
-            layoutType = WindowManager.LayoutParams.TYPE_PHONE;
-        }
-        
-        popupParams = new WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            layoutType,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
-            PixelFormat.TRANSLUCENT
-        );
-        
-        popupParams.gravity = Gravity.TOP | Gravity.START;
-        
-        // Position popup in center of screen
-        android.util.DisplayMetrics metrics = new android.util.DisplayMetrics();
-        windowManager.getDefaultDisplay().getMetrics(metrics);
-        popupParams.x = (metrics.widthPixels - 320) / 2;
-        popupParams.y = (metrics.heightPixels - 400) / 2;
-        
-        windowManager.addView(overlayPopup, popupParams);
-        
-        initializePopupViews();
-        autoPopulateFromClipboard();
-    }
-    
-    private void initializePopupViews() {
-        etText1 = (EditText) overlayPopup.findViewById(R.id.etPopupText1);
-        tvActiveRow = (TextView) overlayPopup.findViewById(R.id.tvPopupActiveRow);
-        tvStatus = (TextView) overlayPopup.findViewById(R.id.tvPopupStatus);
-        tvPreview = (TextView) overlayPopup.findViewById(R.id.tvPopupPreview);
-        btnClosePopup = (TextView) overlayPopup.findViewById(R.id.btnClosePopup);
-        btnDone = (Button) overlayPopup.findViewById(R.id.btnPopupDone);
-        btnClear = (Button) overlayPopup.findViewById(R.id.btnPopupClear);
-        btnOpenApp = (Button) overlayPopup.findViewById(R.id.btnOpenApp);
-        
-        // Get popup header for drag functionality
-        View popupHeader = overlayPopup.findViewById(R.id.popupHeader);
-        
-        etText1.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            
-            @Override
-            public void afterTextChanged(Editable s) {
-                String text = s.toString().trim();
-                if (!text.isEmpty()) {
-                    processText1(text);
-                    // Enable right input box when text1 has content
-                    enableRightInputBox();
-                } else {
-                    // Disable right input box when text1 is empty
-                    disableRightInputBox();
-                }
-            }
-        });
-        
-        // Popup drag functionality on header
-        if (popupHeader != null) {
-            popupHeader.setOnTouchListener(new View.OnTouchListener() {
+        // Header drag for live preview
+        if (livePreviewHeader != null) {
+            livePreviewHeader.setOnTouchListener(new View.OnTouchListener() {
                 @Override
                 public boolean onTouch(View v, MotionEvent event) {
                     switch (event.getAction()) {
                         case MotionEvent.ACTION_DOWN:
-                            popupInitialX = popupParams.x;
-                            popupInitialY = popupParams.y;
-                            popupInitialTouchX = event.getRawX();
-                            popupInitialTouchY = event.getRawY();
-                            popupTouchStartTime = System.currentTimeMillis();
-                            isPopupDragging = false;
+                            previewInitialX = livePreviewParams.x;
+                            previewInitialY = livePreviewParams.y;
+                            previewInitialTouchX = event.getRawX();
+                            previewInitialTouchY = event.getRawY();
+                            isPreviewDragging = false;
+                            createCloseTarget();
                             return true;
                             
                         case MotionEvent.ACTION_MOVE:
-                            int deltaX = (int) (event.getRawX() - popupInitialTouchX);
-                            int deltaY = (int) (event.getRawY() - popupInitialTouchY);
+                            int deltaX = (int) (event.getRawX() - previewInitialTouchX);
+                            int deltaY = (int) (event.getRawY() - previewInitialTouchY);
                             
                             if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
-                                isPopupDragging = true;
+                                isPreviewDragging = true;
                             }
                             
-                            popupParams.x = popupInitialX + deltaX;
-                            popupParams.y = popupInitialY + deltaY;
-                            windowManager.updateViewLayout(overlayPopup, popupParams);
+                            livePreviewParams.x = previewInitialX + deltaX;
+                            livePreviewParams.y = previewInitialY + deltaY;
+                            windowManager.updateViewLayout(livePreviewPopup, livePreviewParams);
+                            
+                            // Highlight close target if near bottom
+                            if (closeTarget != null) {
+                                int popupBottom = livePreviewParams.y + 300;
+                                if (popupBottom > screenHeight - closeTargetHeight - 50) {
+                                    ((TextView) closeTarget).setBackgroundColor(0xFFD32F2F);
+                                } else {
+                                    ((TextView) closeTarget).setBackgroundColor(0xFFFF5252);
+                                }
+                            }
                             return true;
                             
                         case MotionEvent.ACTION_UP:
+                            // Check if dropped on close target
+                            int popupBottom = livePreviewParams.y + 300;
+                            if (isPreviewDragging && popupBottom > screenHeight - closeTargetHeight - 50) {
+                                removeCloseTarget();
+                                closeLivePreview();
+                                stopSelf();
+                                Toast.makeText(FloatingButtonService.this, "Quick Entry closed", Toast.LENGTH_SHORT).show();
+                                return true;
+                            }
+                            removeCloseTarget();
                             return true;
                     }
                     return false;
@@ -505,170 +471,169 @@ public class FloatingButtonService extends Service {
             });
         }
         
-        btnClosePopup.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                closeOverlayPopup();
-            }
-        });
-        
-        btnDone.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dataManager.lockActiveRow();
-                Toast.makeText(FloatingButtonService.this, "Entry saved!", Toast.LENGTH_SHORT).show();
-                hideRightInputBox();
-                closeOverlayPopup();
-            }
-        });
-        
-        btnClear.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                etText1.setText("");
-                if (etRightInput != null) {
-                    etRightInput.setText("");
+        // Close button
+        if (btnClose != null) {
+            btnClose.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    resetLivePreview();
                 }
-                disableRightInputBox();
-                Toast.makeText(FloatingButtonService.this, "Cleared", Toast.LENGTH_SHORT).show();
-            }
-        });
-        
-        btnOpenApp.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(FloatingButtonService.this, MainActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-                closeOverlayPopup();
-            }
-        });
-        
-        etText1.requestFocus();
-        etText1.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                if (imm != null) {
-                    imm.showSoftInput(etText1, InputMethodManager.SHOW_IMPLICIT);
-                }
-            }
-        }, 100);
-        
-        // Initially disable right input box
-        disableRightInputBox();
-    }
-    
-    private void autoPopulateFromClipboard() {
-        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        if (clipboard != null && clipboard.hasPrimaryClip()) {
-            ClipData clipData = clipboard.getPrimaryClip();
-            if (clipData != null && clipData.getItemCount() > 0) {
-                CharSequence text = clipData.getItemAt(0).getText();
-                if (text != null && text.length() > 0) {
-                    etText1.setText(text.toString());
-                }
-            }
+            });
         }
+        
+        // OK button - Save the entry
+        btnLiveOk.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                saveCurrentEntry();
+            }
+        });
+        
+        // Clear button
+        btnLiveClear.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                clearLivePreviewFields();
+            }
+        });
     }
     
-    private void processText1(String text) {
-        String bankName = extractBankName(text);
-        String applicantName = extractApplicantName(text);
-        String reasonOfCNV = extractReasonOfCNV(text);
-        
-        int newRowIndex = dataManager.createNewActiveRow(bankName, applicantName, reasonOfCNV);
-        updatePopupPreview();
-        
-        // Show and enable right input box
-        showRightInputBox();
-        
-        Toast.makeText(this, "Row #" + (newRowIndex + 1) + " created", Toast.LENGTH_SHORT).show();
-    }
-    
-    private void updatePopupPreview() {
-        DataManager.RowData activeRow = dataManager.getActiveRow();
-        
-        if (activeRow == null) {
-            tvActiveRow.setText("Quick Entry");
-            tvStatus.setText("");
-            tvPreview.setText("Waiting for data...");
+    private void saveCurrentEntry() {
+        if (!dataManager.hasActiveRow()) {
+            Toast.makeText(this, "No active row!", Toast.LENGTH_SHORT).show();
             return;
         }
         
-        int rowNum = dataManager.getActiveRowIndex() + 1;
-        tvActiveRow.setText("Active Row: #" + rowNum);
+        // Get all values from editable fields
+        String bank = etLiveBank.getText().toString().trim();
+        String name = etLiveName.getText().toString().trim();
+        String reason = etLiveReason.getText().toString().trim();
+        String coords = etLiveCoords.getText().toString().trim();
+        String area = etLiveArea.getText().toString().trim();
         
-        StringBuilder status = new StringBuilder();
-        if (activeRow.hasText1) status.append("Text-1 OK");
-        if (activeRow.hasText2) status.append("  Text-2 OK");
-        tvStatus.setText(status.toString());
-        
-        StringBuilder preview = new StringBuilder();
-        preview.append("Bank: ").append(activeRow.bankName.isEmpty() ? "-" : activeRow.bankName).append("\n");
-        preview.append("Name: ").append(activeRow.applicantName.isEmpty() ? "-" : activeRow.applicantName).append("\n");
-        preview.append("Reason: ").append(activeRow.reasonOfCNV.isEmpty() ? "-" : activeRow.reasonOfCNV).append("\n");
-        preview.append("Coords: ").append(activeRow.longitude.isEmpty() ? "-" : activeRow.longitude).append("\n");
-        preview.append("Area: ").append(activeRow.area.isEmpty() ? "-" : activeRow.area);
-        
-        tvPreview.setText(preview.toString());
-    }
-    
-    private void closeOverlayPopup() {
-        if (overlayPopup != null) {
-            windowManager.removeView(overlayPopup);
-            overlayPopup = null;
+        // Update the active row with all data
+        DataManager.RowData activeRow = dataManager.getActiveRow();
+        if (activeRow != null) {
+            activeRow.bankName = bank;
+            activeRow.applicantName = name;
+            activeRow.reasonOfCNV = reason;
+            activeRow.longitude = coords;
+            activeRow.area = area;
+            activeRow.hasText2 = true;
+            
+            dataManager.updateRow(dataManager.getActiveRowIndex(), activeRow);
+            dataManager.lockActiveRow();
+            
+            Toast.makeText(this, "Entry saved! Row #" + (dataManager.getActiveRowIndex() + 1), Toast.LENGTH_SHORT).show();
+            
+            // Reset for next entry
+            resetLivePreview();
+            setBubbleBlurred(false);
         }
     }
     
+    private void resetLivePreview() {
+        if (etLiveBank != null) etLiveBank.setText("");
+        if (etLiveName != null) etLiveName.setText("");
+        if (etLiveReason != null) etLiveReason.setText("");
+        if (etLiveCoords != null) etLiveCoords.setText("");
+        if (etLiveArea != null) etLiveArea.setText("");
+        if (tvRowNumber != null) tvRowNumber.setText("");
+        
+        // Hide the popup but keep it ready
+        closeLivePreview();
+        setBubbleBlurred(false);
+        
+        // Reset last clipboard text so same text can trigger again if copied again
+        lastClipboardText = "";
+    }
+    
+    private void clearLivePreviewFields() {
+        if (etLiveBank != null) etLiveBank.setText("");
+        if (etLiveName != null) etLiveName.setText("");
+        if (etLiveReason != null) etLiveReason.setText("");
+        if (etLiveCoords != null) etLiveCoords.setText("");
+        if (etLiveArea != null) etLiveArea.setText("");
+        Toast.makeText(this, "Cleared", Toast.LENGTH_SHORT).show();
+    }
+    
+    private void closeLivePreview() {
+        if (livePreviewPopup != null) {
+            try {
+                windowManager.removeView(livePreviewPopup);
+            } catch (Exception e) {}
+            livePreviewPopup = null;
+            isLivePreviewShowing = false;
+        }
+    }
+    
+    // Parsing methods
     private String extractBankName(String text) {
-        Pattern pattern = Pattern.compile("\\(([^)]+)\\)");
-        Matcher matcher = pattern.matcher(text);
-        if (matcher.find()) {
-            return matcher.group(1).trim();
-        }
+        try {
+            Pattern pattern = Pattern.compile("\\(([^)]+)\\)");
+            Matcher matcher = pattern.matcher(text);
+            if (matcher.find()) {
+                return matcher.group(1).trim();
+            }
+        } catch (Exception e) {}
         return "";
     }
     
     private String extractReasonOfCNV(String text) {
-        Pattern pattern = Pattern.compile("([^(]+)\\(");
-        Matcher matcher = pattern.matcher(text);
-        if (matcher.find()) {
-            return matcher.group(1).trim();
-        }
+        try {
+            Pattern pattern = Pattern.compile("([^(]+)\\(");
+            Matcher matcher = pattern.matcher(text);
+            if (matcher.find()) {
+                return matcher.group(1).trim();
+            }
+        } catch (Exception e) {}
         return "";
     }
     
     private String extractApplicantName(String text) {
-        Pattern pattern = Pattern.compile(
-            "(?i)Applic[a-z]*\\s*(?:Name)?\\s*:?\\s*([^\\n\\d]+?)(?=\\n|\\d+\\)|$)",
-            Pattern.CASE_INSENSITIVE
-        );
-        
-        Matcher matcher = pattern.matcher(text);
-        if (matcher.find()) {
-            String name = matcher.group(1).trim();
-            name = name.replaceAll("[:\\-]+$", "").trim();
-            name = name.replaceAll("\\s*\\d+[:\\)].*", "").trim();
-            return name;
-        }
+        try {
+            Pattern pattern = Pattern.compile(
+                "(?i)Applic[a-z]*\\s*(?:Name)?\\s*:?\\s*[-]?\\s*([^\\n\\d]+?)(?=\\n|\\d+\\)|$)",
+                Pattern.CASE_INSENSITIVE
+            );
+            
+            Matcher matcher = pattern.matcher(text);
+            if (matcher.find()) {
+                String name = matcher.group(1).trim();
+                name = name.replaceAll("[:\\-]+$", "").trim();
+                name = name.replaceAll("\\s*\\d+[:\\)].*", "").trim();
+                return name;
+            }
+        } catch (Exception e) {}
         return "";
     }
     
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (floatingButton != null) {
-            windowManager.removeView(floatingButton);
+        
+        // Remove clipboard listener
+        if (clipboardManager != null && clipListener != null) {
+            clipboardManager.removePrimaryClipChangedListener(clipListener);
         }
-        if (overlayPopup != null) {
-            windowManager.removeView(overlayPopup);
+        if (clipboardHandler != null && clipboardRunnable != null) {
+            clipboardHandler.removeCallbacks(clipboardRunnable);
+        }
+        
+        if (floatingButton != null) {
+            try {
+                windowManager.removeView(floatingButton);
+            } catch (Exception e) {}
+        }
+        if (livePreviewPopup != null) {
+            try {
+                windowManager.removeView(livePreviewPopup);
+            } catch (Exception e) {}
         }
         if (closeTarget != null) {
-            windowManager.removeView(closeTarget);
-        }
-        if (rightInputBox != null) {
-            windowManager.removeView(rightInputBox);
+            try {
+                windowManager.removeView(closeTarget);
+            } catch (Exception e) {}
         }
     }
 }
