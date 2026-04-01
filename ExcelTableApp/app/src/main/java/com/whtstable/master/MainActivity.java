@@ -16,7 +16,6 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TableLayout;
 import android.widget.TableRow;
@@ -24,16 +23,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
     
     // Premium Color Constants
     private static final String COLOR_PRIMARY = "#1A237E";
-    private static final String COLOR_ACCENT = "#7C4DFF";
-    private static final String COLOR_SUCCESS = "#4CAF50";
-    private static final String COLOR_DANGER = "#FF5252";
     private static final String COLOR_HEADER = "#1A237E";
     private static final String COLOR_ROW_SELECTED = "#C5CAE9";
     private static final String COLOR_ROW_DEFAULT = "#FFFFFF";
@@ -42,29 +36,43 @@ public class MainActivity extends Activity {
     private static final String COLOR_TEXT_CELL = "#333333";
     
     private TableLayout tableLayout;
-    private EditText textBox1, textBox2;
-    private Button btnParse, btnClear, btnCopyAll, btnToggleFloating;
+    private Button btnToggleFloating, btnSelectMonth, btnSelectYear, btnHistory, btnCopyAll, btnClearTable;
+    private TextView tvCurrentDate, tvEntryCount;
     private ArrayList<TableRow> dataRows;
     private int selectedRowIndex = -1;
-    private int currentAutoFillRow = 0;
-    private DataManager dataManager;
     private boolean floatingButtonEnabled = false;
     
+    private DatabaseHelper dbHelper;
+    private String currentMonth = "January";
+    private String currentYear = "2026";
+    private String currentDateFull = "";
+    
+    // Column headers - ALL CAPS with renamed columns
     private String[] columnHeaders = {
-        "Bank Name", "Applicant Name", "Status", "Reason of CNV", 
-        "Latitude", "Longitude", "Area", "KM"
+        "BANK NAME", "APPLICANT NAME", "STATUS", "REASON OF CNV", 
+        "LATLONG FROM", "LATLONG TO", "AREA", "KM"
     };
     
     // Premium Column Widths
-    private int[] columnWidths = {180, 350, 120, 180, 150, 250, 120, 100};
+    private int[] columnWidths = {150, 300, 100, 150, 180, 180, 120, 80};
+    
+    // Months array
+    private String[] months = {
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    };
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
-        // Initialize DataManager
-        dataManager = DataManager.getInstance(this);
+        // Initialize Database
+        dbHelper = DatabaseHelper.getInstance(this);
+        
+        // Load saved month/year
+        currentMonth = dbHelper.getSelectedMonth();
+        currentYear = dbHelper.getSelectedYear();
         
         // Initialize views
         initializeViews();
@@ -72,37 +80,74 @@ public class MainActivity extends Activity {
         // Create premium table
         createPremiumTable();
         
-        // Load saved data
-        loadTableFromDataManager();
+        // Load saved data for current month/year
+        loadTableFromDatabase();
         
         // Set up button listeners
         setupButtonListeners();
+        
+        // Update UI
+        updateMonthYearButtons();
     }
     
     private void initializeViews() {
         tableLayout = (TableLayout) findViewById(R.id.tableLayout);
-        textBox1 = (EditText) findViewById(R.id.textBox1);
-        textBox2 = (EditText) findViewById(R.id.textBox2);
-        btnParse = (Button) findViewById(R.id.btnParse);
-        btnClear = (Button) findViewById(R.id.btnClear);
-        btnCopyAll = (Button) findViewById(R.id.btnCopyAll);
         btnToggleFloating = (Button) findViewById(R.id.btnToggleFloating);
+        btnSelectMonth = (Button) findViewById(R.id.btnSelectMonth);
+        btnSelectYear = (Button) findViewById(R.id.btnSelectYear);
+        btnHistory = (Button) findViewById(R.id.btnHistory);
+        btnCopyAll = (Button) findViewById(R.id.btnCopyAll);
+        btnClearTable = (Button) findViewById(R.id.btnClearTable);
+        tvCurrentDate = (TextView) findViewById(R.id.tvCurrentDate);
+        tvEntryCount = (TextView) findViewById(R.id.tvEntryCount);
         
         dataRows = new ArrayList<TableRow>();
     }
     
+    private void updateMonthYearButtons() {
+        btnSelectMonth.setText(currentMonth);
+        btnSelectYear.setText(currentYear);
+        updateCurrentDateDisplay();
+    }
+    
+    private void updateCurrentDateDisplay() {
+        if (currentDateFull.isEmpty()) {
+            tvCurrentDate.setText("No entries yet");
+        } else {
+            tvCurrentDate.setText(currentDateFull);
+        }
+        
+        // Count entries for current date
+        ArrayList<DatabaseHelper.EntryData> entries = dbHelper.getEntriesByMonthYear(currentMonth, currentYear);
+        tvEntryCount.setText(entries.size() + " Entries");
+    }
+    
     private void setupButtonListeners() {
-        btnParse.setOnClickListener(new View.OnClickListener() {
+        btnToggleFloating.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                parseAndFillData();
+                toggleFloatingButton();
             }
         });
         
-        btnClear.setOnClickListener(new View.OnClickListener() {
+        btnSelectMonth.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                clearInputs();
+                showMonthPicker();
+            }
+        });
+        
+        btnSelectYear.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showYearPicker();
+            }
+        });
+        
+        btnHistory.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openHistoryPage();
             }
         });
         
@@ -113,15 +158,56 @@ public class MainActivity extends Activity {
             }
         });
         
-        btnToggleFloating.setOnClickListener(new View.OnClickListener() {
+        btnClearTable.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                toggleFloatingButton();
+                confirmClearTable();
             }
         });
     }
     
+    private void showMonthPicker() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("SELECT MONTH");
+        builder.setItems(months, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                currentMonth = months[which];
+                dbHelper.setSelectedMonth(currentMonth);
+                updateMonthYearButtons();
+                loadTableFromDatabase();
+            }
+        });
+        builder.show();
+    }
+    
+    private void showYearPicker() {
+        final String[] years = {"2024", "2025", "2026", "2027", "2028", "2029", "2030"};
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("SELECT YEAR");
+        builder.setItems(years, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                currentYear = years[which];
+                dbHelper.setSelectedYear(currentYear);
+                updateMonthYearButtons();
+                loadTableFromDatabase();
+            }
+        });
+        builder.show();
+    }
+    
+    private void openHistoryPage() {
+        Intent intent = new Intent(this, HistoryActivity.class);
+        intent.putExtra("month", currentMonth);
+        intent.putExtra("year", currentYear);
+        startActivity(intent);
+    }
+    
     private void createPremiumTable() {
+        tableLayout.removeAllViews();
+        dataRows.clear();
+        
         // Create premium header row
         TableRow headerRow = new TableRow(this);
         headerRow.setBackgroundColor(Color.parseColor(COLOR_HEADER));
@@ -132,22 +218,13 @@ public class MainActivity extends Activity {
             headerRow.addView(tv);
         }
         tableLayout.addView(headerRow);
-        
-        // Create 10 empty data rows with premium styling
-        String[] emptyRow = {"", "", "", "", "", "", "", ""};
-        
-        for (int i = 0; i < 10; i++) {
-            TableRow dataRow = createPremiumDataRow(i, emptyRow);
-            dataRows.add(dataRow);
-            tableLayout.addView(dataRow);
-        }
     }
     
     private TextView createPremiumHeaderCell(String text, int width) {
         TextView tv = new TextView(this);
         tv.setText(text);
-        tv.setPadding(16, 14, 16, 14);
-        tv.setTextSize(13);
+        tv.setPadding(12, 10, 12, 10);
+        tv.setTextSize(11);
         tv.setTextColor(Color.parseColor(COLOR_TEXT_HEADER));
         tv.setTypeface(null, Typeface.BOLD);
         tv.setWidth(width);
@@ -158,13 +235,52 @@ public class MainActivity extends Activity {
         return tv;
     }
     
-    private TableRow createPremiumDataRow(final int rowIndex, String[] data) {
+    private void loadTableFromDatabase() {
+        // Clear existing data rows
+        int childCount = tableLayout.getChildCount();
+        if (childCount > 1) {
+            tableLayout.removeViews(1, childCount - 1);
+        }
+        dataRows.clear();
+        
+        // Load entries for current month/year
+        ArrayList<DatabaseHelper.EntryData> entries = dbHelper.getEntriesByMonthYear(currentMonth, currentYear);
+        
+        if (entries.isEmpty()) {
+            currentDateFull = "";
+        } else {
+            currentDateFull = entries.get(entries.size() - 1).dateFull;
+        }
+        
+        for (int i = 0; i < entries.size(); i++) {
+            DatabaseHelper.EntryData entry = entries.get(i);
+            TableRow dataRow = createDataRow(i, entry);
+            dataRows.add(dataRow);
+            tableLayout.addView(dataRow);
+        }
+        
+        updateCurrentDateDisplay();
+    }
+    
+    private TableRow createDataRow(final int rowIndex, DatabaseHelper.EntryData entry) {
         TableRow row = new TableRow(this);
         row.setBackgroundColor(Color.parseColor(COLOR_ROW_DEFAULT));
         row.setPadding(0, 0, 0, 0);
+        row.setTag(entry.id);  // Store entry ID in tag
+        
+        String[] values = {
+            entry.bankName,
+            entry.applicantName,
+            entry.status,
+            entry.reasonCnv,
+            entry.latlongFrom,
+            entry.latlongTo,
+            entry.area,
+            entry.km
+        };
         
         for (int i = 0; i < columnHeaders.length; i++) {
-            TextView tv = createPremiumDataCell(data[i], columnWidths[i]);
+            TextView tv = createPremiumDataCell(values[i], columnWidths[i]);
             tv.setTag("col_" + i);
             row.addView(tv);
         }
@@ -192,9 +308,9 @@ public class MainActivity extends Activity {
     
     private TextView createPremiumDataCell(String text, int width) {
         TextView tv = new TextView(this);
-        tv.setText(text);
-        tv.setPadding(16, 12, 16, 12);
-        tv.setTextSize(12);
+        tv.setText(text != null ? text : "");
+        tv.setPadding(12, 10, 12, 10);
+        tv.setTextSize(11);
         tv.setTextColor(Color.parseColor(COLOR_TEXT_CELL));
         tv.setWidth(width);
         tv.setMinWidth(width);
@@ -222,6 +338,7 @@ public class MainActivity extends Activity {
     }
     
     private void updateRowBackground(int rowIndex, String color) {
+        if (rowIndex >= dataRows.size()) return;
         TableRow row = dataRows.get(rowIndex);
         for (int i = 0; i < columnHeaders.length; i++) {
             TextView tv = (TextView) row.findViewWithTag("col_" + i);
@@ -234,135 +351,8 @@ public class MainActivity extends Activity {
         }
     }
     
-    private void parseAndFillData() {
-        String text1 = textBox1.getText().toString().trim();
-        
-        if (text1.isEmpty()) {
-            showPremiumToast("WhatsApp text is required!", false);
-            return;
-        }
-        
-        // Auto-select next empty row
-        int targetRow = findNextEmptyRow();
-        if (targetRow == -1) {
-            showPremiumToast("All rows filled! Delete a row first.", false);
-            return;
-        }
-        
-        // Parse Text Box 1
-        String bankName = extractBankName(text1);
-        String reasonOfCNV = extractReasonOfCNV(text1);
-        String applicantName = extractApplicantName(text1);
-        
-        // Parse Text Box 2 (optional) - New format: Line 1 = coordinates, Line 2 = area
-        String longitude = "";
-        String area = "";
-        String text2 = textBox2.getText().toString().trim();
-        if (!text2.isEmpty()) {
-            String[] lines = text2.split("\n");
-            if (lines.length >= 1) {
-                longitude = lines[0].trim();
-            }
-            if (lines.length >= 2) {
-                area = lines[1].trim();
-            }
-        }
-        
-        // Fill the row
-        fillRow(targetRow, bankName, applicantName, reasonOfCNV, longitude, area);
-        selectRow(targetRow);
-        currentAutoFillRow = targetRow + 1;
-        
-        showPremiumToast("Row " + (targetRow + 1) + " filled!", true);
-    }
-    
-    private int findNextEmptyRow() {
-        for (int i = 0; i < dataRows.size(); i++) {
-            if (isRowEmpty(i)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-    
-    private boolean isRowEmpty(int rowIndex) {
-        TableRow row = dataRows.get(rowIndex);
-        for (int i = 0; i < columnHeaders.length; i++) {
-            TextView tv = (TextView) row.findViewWithTag("col_" + i);
-            if (tv != null && !tv.getText().toString().trim().isEmpty()) {
-                return false;
-            }
-        }
-        return true;
-    }
-    
-    private String extractBankName(String text) {
-        Pattern pattern = Pattern.compile("\\(([^)]+)\\)");
-        Matcher matcher = pattern.matcher(text);
-        if (matcher.find()) {
-            return matcher.group(1).trim();
-        }
-        return "";
-    }
-    
-    private String extractReasonOfCNV(String text) {
-        Pattern pattern = Pattern.compile("([^(]+)\\(");
-        Matcher matcher = pattern.matcher(text);
-        if (matcher.find()) {
-            return matcher.group(1).trim();
-        }
-        return "";
-    }
-    
-    private String extractApplicantName(String text) {
-        Pattern pattern = Pattern.compile(
-            "(?i)Applic[a-z]*\\s*(?:Name)?\\s*:?\\s*([^\\n\\d]+?)(?=\\n|\\d+\\)|$)",
-            Pattern.CASE_INSENSITIVE
-        );
-        
-        Matcher matcher = pattern.matcher(text);
-        if (matcher.find()) {
-            String name = matcher.group(1).trim();
-            name = name.replaceAll("[:\\-]+$", "").trim();
-            name = name.replaceAll("\\s*\\d+[:\\)].*", "").trim();
-            return name;
-        }
-        return "";
-    }
-    
-    private String extractLongitude(String text) {
-        Pattern pattern = Pattern.compile("(\\d+\\.\\d+)N(\\d+\\.\\d+)E");
-        Matcher matcher = pattern.matcher(text);
-        if (matcher.find()) {
-            String lat = matcher.group(1);
-            String lon = matcher.group(2);
-            return lat + "," + lon;
-        }
-        return "";
-    }
-    
-    private void fillRow(int rowIndex, String bankName, String applicantName, 
-                         String reasonOfCNV, String longitude, String area) {
-        TableRow row = dataRows.get(rowIndex);
-        
-        setTableCell(row, 0, bankName);
-        setTableCell(row, 1, applicantName);
-        // Column 2 (Status) - blank
-        setTableCell(row, 3, reasonOfCNV);
-        // Column 4 (Latitude) - blank
-        setTableCell(row, 5, longitude);
-        setTableCell(row, 6, area);
-        // Column 7 (KM) - blank
-    }
-    
-    private void setTableCell(TableRow row, int colIndex, String value) {
-        TextView tv = (TextView) row.findViewWithTag("col_" + colIndex);
-        if (tv != null) {
-            tv.setText(value);
-        }
-    }
-    
     private void copyRowToClipboard(int rowIndex) {
+        if (rowIndex >= dataRows.size()) return;
         TableRow row = dataRows.get(rowIndex);
         StringBuilder rowData = new StringBuilder();
         
@@ -380,39 +370,16 @@ public class MainActivity extends Activity {
         ClipData clip = ClipData.newPlainText("Row Data", rowData.toString());
         clipboard.setPrimaryClip(clip);
         
-        showPremiumToast("Row copied! Paste in Excel", true);
-    }
-    
-    private void clearInputs() {
-        textBox1.setText("");
-        textBox2.setText("");
-        showPremiumToast("Inputs cleared", true);
-    }
-    
-    private void loadTableFromDataManager() {
-        ArrayList<DataManager.RowData> savedRows = dataManager.getAllRows();
-        
-        for (int i = 0; i < savedRows.size() && i < dataRows.size(); i++) {
-            DataManager.RowData rowData = savedRows.get(i);
-            TableRow tableRow = dataRows.get(i);
-            
-            setTableCell(tableRow, 0, rowData.bankName);
-            setTableCell(tableRow, 1, rowData.applicantName);
-            setTableCell(tableRow, 2, rowData.status);
-            setTableCell(tableRow, 3, rowData.reasonOfCNV);
-            setTableCell(tableRow, 4, rowData.latitude);
-            setTableCell(tableRow, 5, rowData.longitude);
-            setTableCell(tableRow, 6, rowData.area);
-            setTableCell(tableRow, 7, rowData.km);
-        }
+        showToast("Row copied! Paste in Excel", true);
     }
     
     private void toggleFloatingButton() {
         if (floatingButtonEnabled) {
             stopService(new Intent(this, FloatingButtonService.class));
             floatingButtonEnabled = false;
-            btnToggleFloating.setText("Enable Quick Entry Mode");
-            showPremiumToast("Quick Entry disabled", true);
+            btnToggleFloating.setText("ENABLE");
+            btnToggleFloating.setBackgroundResource(R.drawable.btn_success_bg);
+            showToast("Quick Entry disabled", true);
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (!Settings.canDrawOverlays(this)) {
@@ -427,15 +394,16 @@ public class MainActivity extends Activity {
             
             startService(new Intent(this, FloatingButtonService.class));
             floatingButtonEnabled = true;
-            btnToggleFloating.setText("Disable Quick Entry Mode");
-            showPremiumToast("Quick Entry enabled! Minimize app to use.", true);
+            btnToggleFloating.setText("DISABLE");
+            btnToggleFloating.setBackgroundResource(R.drawable.btn_danger_bg);
+            showToast("Quick Entry ON! Minimize app.", true);
         }
     }
     
     @Override
     protected void onResume() {
         super.onResume();
-        loadTableFromDataManager();
+        loadTableFromDatabase();
     }
     
     @Override
@@ -446,167 +414,113 @@ public class MainActivity extends Activity {
                 if (Settings.canDrawOverlays(this)) {
                     toggleFloatingButton();
                 } else {
-                    showPremiumToast("Permission denied!", false);
+                    showToast("Permission denied!", false);
                 }
             }
         }
     }
     
     private void copyAllFilledRows() {
-        StringBuilder allData = new StringBuilder();
-        int filledCount = 0;
-        
-        for (int i = 0; i < dataRows.size(); i++) {
-            if (!isRowEmpty(i)) {
-                TableRow row = dataRows.get(i);
-                for (int j = 0; j < columnHeaders.length; j++) {
-                    TextView tv = (TextView) row.findViewWithTag("col_" + j);
-                    if (tv != null) {
-                        allData.append(tv.getText().toString());
-                        if (j < columnHeaders.length - 1) {
-                            allData.append("\t");
-                        }
-                    }
-                }
-                allData.append("\n");
-                filledCount++;
-            }
+        if (dataRows.isEmpty()) {
+            showToast("No data to copy!", false);
+            return;
         }
         
-        if (filledCount == 0) {
-            showPremiumToast("No data to copy!", false);
-            return;
+        StringBuilder allData = new StringBuilder();
+        
+        // Add headers first
+        for (int i = 0; i < columnHeaders.length; i++) {
+            allData.append(columnHeaders[i]);
+            if (i < columnHeaders.length - 1) {
+                allData.append("\t");
+            }
+        }
+        allData.append("\n");
+        
+        // Add data rows
+        for (int i = 0; i < dataRows.size(); i++) {
+            TableRow row = dataRows.get(i);
+            for (int j = 0; j < columnHeaders.length; j++) {
+                TextView tv = (TextView) row.findViewWithTag("col_" + j);
+                if (tv != null) {
+                    allData.append(tv.getText().toString());
+                    if (j < columnHeaders.length - 1) {
+                        allData.append("\t");
+                    }
+                }
+            }
+            allData.append("\n");
         }
         
         ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         ClipData clip = ClipData.newPlainText("All Rows Data", allData.toString());
         clipboard.setPrimaryClip(clip);
         
-        showPremiumToast(filledCount + " rows copied!", true);
+        showToast(dataRows.size() + " rows copied!", true);
+    }
+    
+    private void confirmClearTable() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("CLEAR TABLE?");
+        builder.setMessage("This will delete all entries for " + currentMonth + " " + currentYear + ". This cannot be undone.");
+        builder.setPositiveButton("DELETE ALL", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // Delete entries for current month/year
+                ArrayList<DatabaseHelper.EntryData> entries = dbHelper.getEntriesByMonthYear(currentMonth, currentYear);
+                for (DatabaseHelper.EntryData entry : entries) {
+                    dbHelper.deleteEntry(entry.id);
+                }
+                loadTableFromDatabase();
+                showToast("Table cleared!", true);
+            }
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
     }
     
     private void showRowOptionsDialog(final int rowIndex) {
-        final CharSequence[] options = {"Edit Row", "Delete Row", "Move Up", "Move Down"};
+        final CharSequence[] options = {"Delete Row", "Copy Row"};
         
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Row " + (rowIndex + 1) + " Options");
+        builder.setTitle("ROW OPTIONS");
         builder.setItems(options, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 switch (which) {
                     case 0:
-                        editRow(rowIndex);
-                        break;
-                    case 1:
                         deleteRow(rowIndex);
                         break;
-                    case 2:
-                        moveRow(rowIndex, rowIndex - 1);
-                        break;
-                    case 3:
-                        moveRow(rowIndex, rowIndex + 1);
+                    case 1:
+                        copyRowToClipboard(rowIndex);
                         break;
                 }
             }
         });
-        builder.show();
-    }
-    
-    private void editRow(final int rowIndex) {
-        final TableRow row = dataRows.get(rowIndex);
-        final String[] currentValues = new String[columnHeaders.length];
-        
-        for (int i = 0; i < columnHeaders.length; i++) {
-            TextView tv = (TextView) row.findViewWithTag("col_" + i);
-            currentValues[i] = tv != null ? tv.getText().toString() : "";
-        }
-        
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(40, 20, 40, 20);
-        
-        final EditText[] editTexts = new EditText[columnHeaders.length];
-        for (int i = 0; i < columnHeaders.length; i++) {
-            TextView label = new TextView(this);
-            label.setText(columnHeaders[i] + ":");
-            label.setTextSize(13);
-            label.setTextColor(Color.parseColor(COLOR_PRIMARY));
-            label.setPadding(0, 16, 0, 4);
-            layout.addView(label);
-            
-            editTexts[i] = new EditText(this);
-            editTexts[i].setText(currentValues[i]);
-            editTexts[i].setTextSize(14);
-            editTexts[i].setPadding(16, 12, 16, 12);
-            layout.addView(editTexts[i]);
-        }
-        
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Edit Row " + (rowIndex + 1));
-        builder.setView(layout);
-        builder.setPositiveButton("Save", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                for (int i = 0; i < columnHeaders.length; i++) {
-                    TextView tv = (TextView) row.findViewWithTag("col_" + i);
-                    if (tv != null) {
-                        tv.setText(editTexts[i].getText().toString());
-                    }
-                }
-                showPremiumToast("Row updated!", true);
-            }
-        });
-        builder.setNegativeButton("Cancel", null);
         builder.show();
     }
     
     private void deleteRow(final int rowIndex) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Delete Row?");
-        builder.setMessage("Are you sure you want to delete Row " + (rowIndex + 1) + "?");
+        builder.setTitle("DELETE ROW?");
+        builder.setMessage("Are you sure you want to delete this row?");
         builder.setPositiveButton("Delete", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                TableRow row = dataRows.get(rowIndex);
-                for (int i = 0; i < columnHeaders.length; i++) {
-                    TextView tv = (TextView) row.findViewWithTag("col_" + i);
-                    if (tv != null) {
-                        tv.setText("");
-                    }
+                if (rowIndex < dataRows.size()) {
+                    TableRow row = dataRows.get(rowIndex);
+                    long entryId = (long) row.getTag();
+                    dbHelper.deleteEntry(entryId);
+                    loadTableFromDatabase();
+                    showToast("Row deleted!", true);
                 }
-                updateRowBackground(rowIndex, COLOR_ROW_DEFAULT);
-                showPremiumToast("Row deleted!", true);
             }
         });
         builder.setNegativeButton("Cancel", null);
         builder.show();
     }
     
-    private void moveRow(int fromIndex, int toIndex) {
-        if (toIndex < 0 || toIndex >= dataRows.size()) {
-            showPremiumToast("Cannot move row!", false);
-            return;
-        }
-        
-        TableRow fromRow = dataRows.get(fromIndex);
-        TableRow toRow = dataRows.get(toIndex);
-        
-        for (int i = 0; i < columnHeaders.length; i++) {
-            TextView fromTv = (TextView) fromRow.findViewWithTag("col_" + i);
-            TextView toTv = (TextView) toRow.findViewWithTag("col_" + i);
-            
-            if (fromTv != null && toTv != null) {
-                String temp = fromTv.getText().toString();
-                fromTv.setText(toTv.getText().toString());
-                toTv.setText(temp);
-            }
-        }
-        
-        showPremiumToast("Row moved!", true);
-    }
-    
-    private void showPremiumToast(String message, boolean isSuccess) {
-        Toast toast = Toast.makeText(this, message, Toast.LENGTH_SHORT);
-        toast.show();
+    private void showToast(String message, boolean isSuccess) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 }

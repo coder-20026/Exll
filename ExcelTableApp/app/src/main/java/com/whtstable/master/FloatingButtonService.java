@@ -13,12 +13,13 @@ import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -41,7 +42,7 @@ public class FloatingButtonService extends Service {
     private WindowManager.LayoutParams buttonParams;
     private WindowManager.LayoutParams livePreviewParams;
     private WindowManager.LayoutParams closeTargetParams;
-    private DataManager dataManager;
+    private DatabaseHelper dbHelper;
     
     // Bubble drag variables
     private int initialX, initialY;
@@ -54,8 +55,8 @@ public class FloatingButtonService extends Service {
     private boolean isPreviewDragging = false;
     
     // Live Preview views
-    private EditText etLiveBank, etLiveName, etLiveReason, etLiveCoords, etLiveArea;
-    private TextView tvRowNumber;
+    private EditText etLiveDate, etLiveBank, etLiveName, etLiveReason, etLiveCoords, etLiveArea;
+    private TextView tvRowNumber, tvDatePreview;
     private Button btnLiveOk, btnLiveClear;
     private LinearLayout livePreviewContainer;
     
@@ -68,14 +69,18 @@ public class FloatingButtonService extends Service {
     private ClipboardManager clipboardManager;
     private ClipboardManager.OnPrimaryClipChangedListener clipListener;
     private String lastClipboardText = "";
-    private String lastProcessedText = "";  // To prevent duplicate entries
-    private String initialClipboardText = "";  // Store clipboard text at enable time
+    private String lastProcessedText = "";
+    private String initialClipboardText = "";
     private Handler clipboardHandler;
     private Runnable clipboardRunnable;
-    private boolean isInitialized = false;  // Flag to ignore initial clipboard
+    private boolean isInitialized = false;
     
     // State
     private boolean isLivePreviewShowing = false;
+    private String currentMonth;
+    private String currentYear;
+    private String currentDay = "";
+    private int entryCount = 0;
     
     @Override
     public IBinder onBind(Intent intent) {
@@ -86,7 +91,10 @@ public class FloatingButtonService extends Service {
     public void onCreate() {
         super.onCreate();
         
-        dataManager = DataManager.getInstance(this);
+        dbHelper = DatabaseHelper.getInstance(this);
+        currentMonth = dbHelper.getSelectedMonth();
+        currentYear = dbHelper.getSelectedYear();
+        
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         
         // Get screen dimensions
@@ -103,6 +111,9 @@ public class FloatingButtonService extends Service {
         
         createFloatingButton();
         setupClipboardMonitoring();
+        
+        // Show live preview immediately (always visible)
+        showLivePreview("", "", "", 0);
     }
     
     private void createNotificationChannel() {
@@ -138,7 +149,7 @@ public class FloatingButtonService extends Service {
         
         return builder
             .setContentTitle("WhtsTable Quick Entry")
-            .setContentText("Copy WhatsApp text - Live Preview appears")
+            .setContentText("Copy WhatsApp text - Auto fills popup")
             .setSmallIcon(android.R.drawable.ic_input_add)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
@@ -157,13 +168,13 @@ public class FloatingButtonService extends Service {
                     CharSequence text = clipData.getItemAt(0).getText();
                     if (text != null) {
                         initialClipboardText = text.toString().trim();
-                        lastClipboardText = initialClipboardText;  // Mark as already seen
+                        lastClipboardText = initialClipboardText;
                     }
                 }
             }
         } catch (Exception e) {}
         
-        // Mark as initialized after short delay to ignore initial clipboard
+        // Mark as initialized after short delay
         clipboardHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -171,7 +182,7 @@ public class FloatingButtonService extends Service {
             }
         }, 500);
         
-        // Poll clipboard every 500ms (more reliable than listener on some devices)
+        // Poll clipboard every 500ms
         clipboardRunnable = new Runnable() {
             @Override
             public void run() {
@@ -179,7 +190,7 @@ public class FloatingButtonService extends Service {
                 clipboardHandler.postDelayed(this, 500);
             }
         };
-        clipboardHandler.postDelayed(clipboardRunnable, 1000);  // Start after 1 second
+        clipboardHandler.postDelayed(clipboardRunnable, 1000);
         
         // Also use listener as backup
         clipListener = new ClipboardManager.OnPrimaryClipChangedListener() {
@@ -194,7 +205,7 @@ public class FloatingButtonService extends Service {
     }
     
     private void checkClipboard() {
-        if (!isInitialized) return;  // Don't process until initialized
+        if (!isInitialized) return;
         
         try {
             if (clipboardManager != null && clipboardManager.hasPrimaryClip()) {
@@ -204,34 +215,22 @@ public class FloatingButtonService extends Service {
                     if (text != null && text.length() > 0) {
                         String newText = text.toString().trim();
                         
-                        // Skip if same as initial clipboard (old data)
-                        if (newText.equals(initialClipboardText)) {
+                        // Skip if same as initial, last, or already processed
+                        if (newText.equals(initialClipboardText) ||
+                            newText.equals(lastClipboardText) ||
+                            newText.equals(lastProcessedText)) {
                             return;
                         }
                         
-                        // Skip if same as last clipboard text
-                        if (newText.equals(lastClipboardText)) {
-                            return;
-                        }
-                        
-                        // Skip if already processed (duplicate prevention)
-                        if (newText.equals(lastProcessedText)) {
-                            return;
-                        }
-                        
-                        // Valid new text - process it
                         lastClipboardText = newText;
                         onClipboardTextDetected(newText);
                     }
                 }
             }
-        } catch (Exception e) {
-            // Silent fail - clipboard access can be restricted
-        }
+        } catch (Exception e) {}
     }
     
     private void onClipboardTextDetected(String text) {
-        // Mark this text as processed to prevent duplicates
         lastProcessedText = text;
         
         // Make bubble look blurred/dim
@@ -242,22 +241,15 @@ public class FloatingButtonService extends Service {
         String applicantName = extractApplicantName(text);
         String reasonOfCNV = extractReasonOfCNV(text);
         
-        // Create new row in data manager
-        int newRowIndex = dataManager.createNewActiveRow(bankName, applicantName, reasonOfCNV);
-        
-        // Show live preview popup automatically
-        showLivePreview(bankName, applicantName, reasonOfCNV, newRowIndex);
+        // Update live preview with parsed data
+        updateLivePreview(bankName, applicantName, reasonOfCNV);
     }
     
     private void setBubbleBlurred(boolean blurred) {
         if (floatingButton != null) {
             ImageView btnImage = (ImageView) floatingButton.findViewById(R.id.floatingButton);
             if (btnImage != null) {
-                if (blurred) {
-                    btnImage.setAlpha(0.5f);
-                } else {
-                    btnImage.setAlpha(1.0f);
-                }
+                btnImage.setAlpha(blurred ? 0.5f : 1.0f);
             }
         }
     }
@@ -267,12 +259,12 @@ public class FloatingButtonService extends Service {
         
         closeTarget = new TextView(this);
         TextView tv = (TextView) closeTarget;
-        tv.setText("X Close");
-        tv.setTextSize(16);
+        tv.setText("X CLOSE");
+        tv.setTextSize(14);
         tv.setTextColor(0xFFFFFFFF);
         tv.setGravity(Gravity.CENTER);
         tv.setBackgroundColor(0xFFFF5252);
-        tv.setPadding(0, 20, 0, 20);
+        tv.setPadding(0, 16, 0, 16);
         
         int layoutType;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -365,7 +357,6 @@ public class FloatingButtonService extends Service {
                         buttonParams.y = initialY + deltaY;
                         windowManager.updateViewLayout(floatingButton, buttonParams);
                         
-                        // Highlight close target if near bottom
                         if (closeTarget != null) {
                             int bubbleBottom = buttonParams.y + 60;
                             if (bubbleBottom > screenHeight - closeTargetHeight - 100) {
@@ -379,7 +370,6 @@ public class FloatingButtonService extends Service {
                     case MotionEvent.ACTION_UP:
                         longPressHandler.removeCallbacks(longPressRunnable);
                         
-                        // Check if dropped on close target
                         int bubbleBottom = buttonParams.y + 60;
                         if (isDragging && bubbleBottom > screenHeight - closeTargetHeight - 100) {
                             removeCloseTarget();
@@ -399,14 +389,7 @@ public class FloatingButtonService extends Service {
     
     private void showLivePreview(String bank, String name, String reason, int rowIndex) {
         if (livePreviewPopup != null) {
-            // Update existing popup
-            if (etLiveBank != null) etLiveBank.setText(bank);
-            if (etLiveName != null) etLiveName.setText(name);
-            if (etLiveReason != null) etLiveReason.setText(reason);
-            if (etLiveCoords != null) etLiveCoords.setText("");
-            if (etLiveArea != null) etLiveArea.setText("");
-            if (tvRowNumber != null) tvRowNumber.setText("Row #" + (rowIndex + 1));
-            return;
+            return;  // Already showing
         }
         
         livePreviewPopup = LayoutInflater.from(this).inflate(R.layout.live_preview_layout, null);
@@ -427,34 +410,57 @@ public class FloatingButtonService extends Service {
         );
         
         livePreviewParams.gravity = Gravity.TOP | Gravity.START;
-        // Default position: Top-left corner of screen
         livePreviewParams.x = 10;
         livePreviewParams.y = 50;
         
         windowManager.addView(livePreviewPopup, livePreviewParams);
         isLivePreviewShowing = true;
         
-        initializeLivePreviewViews(bank, name, reason, rowIndex);
+        initializeLivePreviewViews();
     }
     
-    private void initializeLivePreviewViews(String bank, String name, String reason, int rowIndex) {
+    private void updateLivePreview(String bank, String name, String reason) {
+        if (etLiveBank != null) etLiveBank.setText(bank);
+        if (etLiveName != null) etLiveName.setText(name);
+        if (etLiveReason != null) etLiveReason.setText(reason);
+        if (etLiveCoords != null) etLiveCoords.setText("");
+        if (etLiveArea != null) etLiveArea.setText("");
+        
+        entryCount++;
+        if (tvRowNumber != null) tvRowNumber.setText("#" + entryCount);
+    }
+    
+    private void initializeLivePreviewViews() {
         livePreviewContainer = (LinearLayout) livePreviewPopup.findViewById(R.id.livePreviewContainer);
+        etLiveDate = (EditText) livePreviewPopup.findViewById(R.id.etLiveDate);
         etLiveBank = (EditText) livePreviewPopup.findViewById(R.id.etLiveBank);
         etLiveName = (EditText) livePreviewPopup.findViewById(R.id.etLiveName);
         etLiveReason = (EditText) livePreviewPopup.findViewById(R.id.etLiveReason);
         etLiveCoords = (EditText) livePreviewPopup.findViewById(R.id.etLiveCoords);
         etLiveArea = (EditText) livePreviewPopup.findViewById(R.id.etLiveArea);
         tvRowNumber = (TextView) livePreviewPopup.findViewById(R.id.tvRowNumber);
+        tvDatePreview = (TextView) livePreviewPopup.findViewById(R.id.tvDatePreview);
         btnLiveOk = (Button) livePreviewPopup.findViewById(R.id.btnLiveOk);
         btnLiveClear = (Button) livePreviewPopup.findViewById(R.id.btnLiveClear);
         TextView btnClose = (TextView) livePreviewPopup.findViewById(R.id.btnCloseLivePreview);
         View livePreviewHeader = livePreviewPopup.findViewById(R.id.livePreviewHeader);
         
-        // Set initial values
-        etLiveBank.setText(bank);
-        etLiveName.setText(name);
-        etLiveReason.setText(reason);
-        tvRowNumber.setText("Row #" + (rowIndex + 1));
+        tvRowNumber.setText("Ready");
+        updateDatePreview();
+        
+        // Date field listener - auto update preview
+        etLiveDate.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                updateDatePreview();
+            }
+            
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
         
         // Header drag for live preview
         if (livePreviewHeader != null) {
@@ -483,9 +489,8 @@ public class FloatingButtonService extends Service {
                             livePreviewParams.y = previewInitialY + deltaY;
                             windowManager.updateViewLayout(livePreviewPopup, livePreviewParams);
                             
-                            // Highlight close target if near bottom
                             if (closeTarget != null) {
-                                int popupBottom = livePreviewParams.y + 300;
+                                int popupBottom = livePreviewParams.y + 250;
                                 if (popupBottom > screenHeight - closeTargetHeight - 50) {
                                     ((TextView) closeTarget).setBackgroundColor(0xFFD32F2F);
                                 } else {
@@ -495,8 +500,7 @@ public class FloatingButtonService extends Service {
                             return true;
                             
                         case MotionEvent.ACTION_UP:
-                            // Check if dropped on close target
-                            int popupBottom = livePreviewParams.y + 300;
+                            int popupBottom = livePreviewParams.y + 250;
                             if (isPreviewDragging && popupBottom > screenHeight - closeTargetHeight - 50) {
                                 removeCloseTarget();
                                 closeLivePreview();
@@ -517,7 +521,9 @@ public class FloatingButtonService extends Service {
             btnClose.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    resetLivePreview();
+                    closeLivePreview();
+                    stopSelf();
+                    Toast.makeText(FloatingButtonService.this, "Quick Entry closed", Toast.LENGTH_SHORT).show();
                 }
             });
         }
@@ -539,43 +545,83 @@ public class FloatingButtonService extends Service {
         });
     }
     
-    private void saveCurrentEntry() {
-        if (!dataManager.hasActiveRow()) {
-            Toast.makeText(this, "No active row!", Toast.LENGTH_SHORT).show();
+    private void updateDatePreview() {
+        String day = etLiveDate != null ? etLiveDate.getText().toString().trim() : "";
+        if (day.isEmpty()) {
+            if (tvDatePreview != null) tvDatePreview.setText("");
             return;
         }
         
-        // Get all values from editable fields
-        String bank = etLiveBank.getText().toString().trim();
-        String name = etLiveName.getText().toString().trim();
-        String reason = etLiveReason.getText().toString().trim();
-        String coords = etLiveCoords.getText().toString().trim();
-        String area = etLiveArea.getText().toString().trim();
+        // Pad day with zero if needed
+        if (day.length() == 1) {
+            day = "0" + day;
+        }
         
-        // Update the active row with all data
-        DataManager.RowData activeRow = dataManager.getActiveRow();
-        if (activeRow != null) {
-            activeRow.bankName = bank;
-            activeRow.applicantName = name;
-            activeRow.reasonOfCNV = reason;
-            activeRow.longitude = coords;
-            activeRow.area = area;
-            activeRow.hasText2 = true;
+        String fullDate = day + " " + currentMonth + " " + currentYear;
+        if (tvDatePreview != null) tvDatePreview.setText(fullDate);
+        currentDay = day;
+    }
+    
+    private String getFullDate() {
+        String day = etLiveDate != null ? etLiveDate.getText().toString().trim() : "";
+        if (day.isEmpty()) return "";
+        
+        if (day.length() == 1) {
+            day = "0" + day;
+        }
+        
+        return day + " " + currentMonth + " " + currentYear;
+    }
+    
+    private void saveCurrentEntry() {
+        // Validate date
+        String day = etLiveDate != null ? etLiveDate.getText().toString().trim() : "";
+        if (day.isEmpty()) {
+            Toast.makeText(this, "Enter date first!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Get all values
+        String bank = etLiveBank != null ? etLiveBank.getText().toString().trim() : "";
+        String name = etLiveName != null ? etLiveName.getText().toString().trim() : "";
+        String reason = etLiveReason != null ? etLiveReason.getText().toString().trim() : "";
+        String coords = etLiveCoords != null ? etLiveCoords.getText().toString().trim() : "";
+        String area = etLiveArea != null ? etLiveArea.getText().toString().trim() : "";
+        
+        // Validate at least some data
+        if (bank.isEmpty() && name.isEmpty()) {
+            Toast.makeText(this, "Enter bank or name!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Create entry
+        DatabaseHelper.EntryData entry = new DatabaseHelper.EntryData();
+        entry.dateFull = getFullDate();
+        entry.day = day.length() == 1 ? "0" + day : day;
+        entry.month = currentMonth;
+        entry.year = currentYear;
+        entry.bankName = bank;
+        entry.applicantName = name;
+        entry.reasonCnv = reason;
+        entry.latlongTo = coords;
+        entry.area = area;
+        
+        // Save to database
+        long id = dbHelper.addEntry(entry);
+        
+        if (id > 0) {
+            Toast.makeText(this, "Saved: " + entry.dateFull, Toast.LENGTH_SHORT).show();
             
-            dataManager.updateRow(dataManager.getActiveRowIndex(), activeRow);
-            dataManager.lockActiveRow();
-            
-            int savedRowNum = dataManager.getActiveRowIndex() + 1;
-            Toast.makeText(this, "Saved Row #" + savedRowNum, Toast.LENGTH_SHORT).show();
-            
-            // Clear fields but KEEP popup visible (don't close it)
-            clearLivePreviewFieldsAndReset();
+            // Clear fields but keep popup visible
+            clearFieldsAndReset();
             setBubbleBlurred(false);
+        } else {
+            Toast.makeText(this, "Save failed!", Toast.LENGTH_SHORT).show();
         }
     }
     
-    private void clearLivePreviewFieldsAndReset() {
-        // Clear all fields - popup stays visible
+    private void clearFieldsAndReset() {
+        // Clear all fields except date (keep date for continuous entry)
         if (etLiveBank != null) etLiveBank.setText("");
         if (etLiveName != null) etLiveName.setText("");
         if (etLiveReason != null) etLiveReason.setText("");
@@ -583,25 +629,18 @@ public class FloatingButtonService extends Service {
         if (etLiveArea != null) etLiveArea.setText("");
         if (tvRowNumber != null) tvRowNumber.setText("Ready");
         
-        // Reset processed text so same text CAN be processed again if copied again
-        lastProcessedText = "";
-    }
-    
-    private void resetLivePreview() {
-        // This is called when close (X) button is pressed - hide popup
-        closeLivePreview();
-        setBubbleBlurred(false);
-        
-        // Reset tracking so new text can trigger again
+        // Reset processed text
         lastProcessedText = "";
     }
     
     private void clearLivePreviewFields() {
+        if (etLiveDate != null) etLiveDate.setText("");
         if (etLiveBank != null) etLiveBank.setText("");
         if (etLiveName != null) etLiveName.setText("");
         if (etLiveReason != null) etLiveReason.setText("");
         if (etLiveCoords != null) etLiveCoords.setText("");
         if (etLiveArea != null) etLiveArea.setText("");
+        if (tvDatePreview != null) tvDatePreview.setText("");
         Toast.makeText(this, "Cleared", Toast.LENGTH_SHORT).show();
     }
     
@@ -660,7 +699,6 @@ public class FloatingButtonService extends Service {
     public void onDestroy() {
         super.onDestroy();
         
-        // Remove clipboard listener
         if (clipboardManager != null && clipListener != null) {
             clipboardManager.removePrimaryClipChangedListener(clipListener);
         }
