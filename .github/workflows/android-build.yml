@@ -23,6 +23,7 @@ jobs:
         cache: gradle
     
     - name: Setup Gradle Wrapper
+      working-directory: ./ExcelTableApp
       run: |
         mkdir -p gradle/wrapper
         curl -L -o gradle/wrapper/gradle-wrapper.jar "https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradle/wrapper/gradle-wrapper.jar"
@@ -33,6 +34,7 @@ jobs:
         echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
 
     - name: Create Gradlew Script
+      working-directory: ./ExcelTableApp
       run: |
         echo '#!/bin/sh' > gradlew
         echo 'DIRNAME=$(dirname "$0")' >> gradlew
@@ -41,6 +43,7 @@ jobs:
         chmod +x gradlew
 
     - name: Generate App Icons
+      working-directory: ./ExcelTableApp
       run: |
         sudo apt-get update && sudo apt-get install -y imagemagick
         mkdir -p app/src/main/res/mipmap-mdpi
@@ -60,9 +63,11 @@ jobs:
         cp app/src/main/res/mipmap-xxxhdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
 
     - name: Build Debug APK
+      working-directory: ./ExcelTableApp
       run: ./gradlew assembleDebug --stacktrace
       
     - name: Build Release APK
+      working-directory: ./ExcelTableApp
       run: ./gradlew assembleRelease --stacktrace
       continue-on-error: true
       
@@ -70,7 +75,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
-        path: app/build/outputs/apk/debug/app-debug.apk
+        path: ExcelTableApp/app/build/outputs/apk/debug/*.apk
         retention-days: 30
         
     - name: Upload Release APK
@@ -78,5 +83,5 @@ jobs:
       if: success() || failure()
       with:
         name: app-release
-        path: app/build/outputs/apk/release/*.apk
+        path: ExcelTableApp/app/build/outputs/apk/release/*.apk
         retention-days: 30
