@@ -5,31 +5,14 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        // Fallback repositories
-        maven { url 'https://jitpack.io' }
     }
     dependencies {
-        // Android Gradle Plugin - Compatible with Gradle 6.5+
-        classpath 'com.android.tools.build:gradle:7.4.2'
-    }
-}
-
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url 'https://jitpack.io' }
+        // Android Gradle Plugin 8.1.0 - Compatible with Gradle 8.x
+        classpath 'com.android.tools.build:gradle:8.1.0'
     }
 }
 
 // Clean task
 task clean(type: Delete) {
     delete rootProject.buildDir
-}
-
-// Project info
-ext {
-    appName = "WhtsTable Master"
-    appVersion = "2.0.0"
-    buildDate = new Date().format("yyyy-MM-dd")
 }
