@@ -91,10 +91,11 @@
                     android:textColor="#FF5252"/>
             </LinearLayout>
             
+            <!-- TextBox 1 - Height Increased (equal to old textBox2 height) -->
             <EditText
                 android:id="@+id/textBox1"
                 android:layout_width="match_parent"
-                android:layout_height="80dp"
+                android:layout_height="100dp"
                 android:hint="Paste WhatsApp text here..."
                 android:gravity="top|start"
                 android:padding="12dp"
@@ -116,7 +117,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="OCR / Location Text"
+                    android:text="Coordinates + Area"
                     android:textSize="13sp"
                     android:textStyle="bold"
                     android:textColor="#1A237E"/>
@@ -129,11 +130,12 @@
                     android:textColor="#757575"/>
             </LinearLayout>
             
+            <!-- TextBox 2 - Height Reduced to half -->
             <EditText
                 android:id="@+id/textBox2"
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:hint="Paste coordinates or OCR text..."
+                android:layout_height="40dp"
+                android:hint="22.1234,71.1234 (Line 1) | Ahmedabad (Line 2)"
                 android:gravity="top|start"
                 android:padding="12dp"
                 android:background="@drawable/input_bg"
@@ -194,18 +196,6 @@
                 android:layout_marginStart="6dp"
                 android:elevation="3dp"/>
         </LinearLayout>
-        
-        <!-- Instructions Card -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Paste text &#8594; Parse &#8594; Long-press row for options &#8594; Copy All for Excel"
-            android:textSize="11sp"
-            android:textColor="#5D4037"
-            android:padding="12dp"
-            android:background="@drawable/instruction_card_bg"
-            android:layout_marginBottom="12dp"
-            android:gravity="center"/>
         
         <!-- Scrollable Table Container -->
         <LinearLayout
