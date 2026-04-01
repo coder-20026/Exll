@@ -11,190 +11,158 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="@drawable/table_header_bg"
-        android:padding="16dp"
+        android:padding="12dp"
         android:elevation="8dp">
         
-        <!-- App Title -->
-        <TextView
+        <!-- Top Row: Title + Enable Toggle -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="WhatsApp Table Master"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="#FFFFFF"
-            android:gravity="center"
-            android:letterSpacing="0.05"/>
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="WHTSTABLE MASTER"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:letterSpacing="0.05"/>
+            
+            <!-- Enable Bubble Toggle Button (Circular) -->
+            <Button
+                android:id="@+id/btnToggleFloating"
+                android:layout_width="100dp"
+                android:layout_height="36dp"
+                android:text="ENABLE"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textAllCaps="true"
+                android:background="@drawable/btn_success_bg"
+                android:elevation="4dp"/>
+        </LinearLayout>
         
-        <TextView
+        <!-- Month/Year Selection Row -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Premium Data Entry Tool"
-            android:textSize="12sp"
-            android:textColor="#B3FFFFFF"
-            android:gravity="center"
-            android:layout_marginTop="2dp"/>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="8dp">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="MONTH:"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#B3FFFFFF"
+                android:layout_marginEnd="6dp"/>
+            
+            <Button
+                android:id="@+id/btnSelectMonth"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:minWidth="80dp"
+                android:text="January"
+                android:textColor="#1A237E"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textAllCaps="false"
+                android:background="@drawable/card_bg"
+                android:paddingHorizontal="12dp"
+                android:layout_marginEnd="12dp"/>
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="YEAR:"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#B3FFFFFF"
+                android:layout_marginEnd="6dp"/>
+            
+            <Button
+                android:id="@+id/btnSelectYear"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:minWidth="60dp"
+                android:text="2026"
+                android:textColor="#1A237E"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textAllCaps="false"
+                android:background="@drawable/card_bg"
+                android:paddingHorizontal="12dp"
+                android:layout_marginEnd="12dp"/>
+            
+            <!-- History Button -->
+            <Button
+                android:id="@+id/btnHistory"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:text="HISTORY"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textAllCaps="true"
+                android:background="@drawable/btn_secondary_bg"
+                android:paddingHorizontal="12dp"/>
+        </LinearLayout>
     </LinearLayout>
     
-    <!-- Main Content Area -->
+    <!-- Main Content Area - Table Only -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:padding="8dp">
         
-        <!-- Floating Button Toggle - Premium Style -->
-        <Button
-            android:id="@+id/btnToggleFloating"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:text="Enable Quick Entry Mode"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textAllCaps="false"
-            android:background="@drawable/btn_success_bg"
-            android:layout_marginBottom="12dp"
-            android:elevation="4dp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"/>
-        
-        <!-- Input Section Card -->
+        <!-- Current Date Display -->
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@drawable/shadow_bg"
-            android:padding="16dp"
-            android:layout_marginBottom="12dp">
-            
-            <!-- Text Box 1 Label -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="6dp">
-                
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="WhatsApp Text"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:textColor="#1A237E"/>
-                
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text=" (Required)"
-                    android:textSize="11sp"
-                    android:textColor="#FF5252"/>
-            </LinearLayout>
-            
-            <!-- TextBox 1 - Height Increased (equal to old textBox2 height) -->
-            <EditText
-                android:id="@+id/textBox1"
-                android:layout_width="match_parent"
-                android:layout_height="100dp"
-                android:hint="Paste WhatsApp text here..."
-                android:gravity="top|start"
-                android:padding="12dp"
-                android:background="@drawable/input_bg"
-                android:textSize="13sp"
-                android:textColor="#333333"
-                android:textColorHint="#9E9E9E"
-                android:inputType="textMultiLine"
-                android:scrollbars="vertical"
-                android:layout_marginBottom="12dp"/>
-            
-            <!-- Text Box 2 Label -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="6dp">
-                
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Coordinates + Area"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:textColor="#1A237E"/>
-                
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text=" (Optional)"
-                    android:textSize="11sp"
-                    android:textColor="#757575"/>
-            </LinearLayout>
-            
-            <!-- TextBox 2 - Height Reduced to half -->
-            <EditText
-                android:id="@+id/textBox2"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:hint="22.1234,71.1234 (Line 1) | Ahmedabad (Line 2)"
-                android:gravity="top|start"
-                android:padding="12dp"
-                android:background="@drawable/input_bg"
-                android:textSize="13sp"
-                android:textColor="#333333"
-                android:textColorHint="#9E9E9E"
-                android:inputType="textMultiLine"
-                android:scrollbars="vertical"/>
-        </LinearLayout>
-        
-        <!-- Action Buttons Row -->
-        <LinearLayout
+            android:id="@+id/currentDateContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="12dp">
+            android:background="@drawable/instruction_card_bg"
+            android:padding="8dp"
+            android:layout_marginBottom="8dp"
+            android:gravity="center_vertical">
             
-            <Button
-                android:id="@+id/btnParse"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:text="Parse &amp; Fill"
-                android:textColor="#FFFFFF"
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="CURRENT DATE:"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                android:textAllCaps="false"
-                android:background="@drawable/btn_primary_bg"
-                android:layout_marginEnd="6dp"
-                android:elevation="3dp"/>
+                android:textColor="#1A237E"
+                android:layout_marginEnd="8dp"/>
             
-            <Button
-                android:id="@+id/btnCopyAll"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:text="Copy All"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"
+            <TextView
+                android:id="@+id/tvCurrentDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textSize="14sp"
                 android:textStyle="bold"
-                android:textAllCaps="false"
-                android:background="@drawable/btn_secondary_bg"
-                android:layout_marginStart="3dp"
-                android:layout_marginEnd="3dp"
-                android:elevation="3dp"/>
+                android:textColor="#4CAF50"/>
             
-            <Button
-                android:id="@+id/btnClear"
+            <View
                 android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:text="Clear"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:background="@drawable/btn_danger_bg"
-                android:layout_marginStart="6dp"
-                android:elevation="3dp"/>
+                android:layout_height="1dp"
+                android:layout_weight="1"/>
+            
+            <TextView
+                android:id="@+id/tvEntryCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 Entries"
+                android:textSize="11sp"
+                android:textColor="#757575"/>
         </LinearLayout>
         
         <!-- Scrollable Table Container -->
@@ -232,7 +200,7 @@
         </LinearLayout>
     </LinearLayout>
     
-    <!-- Bottom Status Bar -->
+    <!-- Bottom Action Bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -241,12 +209,31 @@
         android:padding="8dp"
         android:gravity="center">
         
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="WhtsTable Master v2.0"
+        <Button
+            android:id="@+id/btnCopyAll"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:text="COPY ALL"
+            android:textColor="#FFFFFF"
             android:textSize="11sp"
-            android:textColor="#B3FFFFFF"/>
+            android:textStyle="bold"
+            android:textAllCaps="true"
+            android:background="@drawable/btn_primary_bg"
+            android:layout_marginEnd="4dp"/>
+        
+        <Button
+            android:id="@+id/btnClearTable"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:text="CLEAR TABLE"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textAllCaps="true"
+            android:background="@drawable/btn_danger_bg"
+            android:layout_marginStart="4dp"/>
     </LinearLayout>
     
 </LinearLayout>

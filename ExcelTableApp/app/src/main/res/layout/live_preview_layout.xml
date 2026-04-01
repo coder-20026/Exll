@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/livePreviewContainer"
-    android:layout_width="200dp"
+    android:layout_width="210dp"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/popup_bg"
@@ -12,7 +12,7 @@
     <LinearLayout
         android:id="@+id/livePreviewHeader"
         android:layout_width="match_parent"
-        android:layout_height="28dp"
+        android:layout_height="26dp"
         android:orientation="horizontal"
         android:background="@drawable/popup_header_bg"
         android:paddingHorizontal="8dp"
@@ -23,9 +23,9 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Live Preview"
+            android:text="LIVE PREVIEW"
             android:textColor="#FFFFFF"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:textStyle="bold"/>
         
         <TextView
@@ -40,8 +40,8 @@
         <!-- Close Button -->
         <TextView
             android:id="@+id/btnCloseLivePreview"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:text="X"
             android:textSize="10sp"
             android:textStyle="bold"
@@ -57,6 +57,54 @@
         android:orientation="vertical"
         android:padding="6dp">
         
+        <!-- Date Row (NEW) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/instruction_card_bg"
+            android:padding="4dp">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DATE:"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:textColor="#1A237E"
+                android:layout_marginEnd="4dp"/>
+            
+            <EditText
+                android:id="@+id/etLiveDate"
+                android:layout_width="32dp"
+                android:layout_height="22dp"
+                android:hint="DD"
+                android:textSize="10sp"
+                android:textColor="#333333"
+                android:textColorHint="#AAAAAA"
+                android:paddingHorizontal="4dp"
+                android:paddingVertical="0dp"
+                android:background="@drawable/input_bg"
+                android:inputType="number"
+                android:maxLength="2"
+                android:gravity="center"
+                android:singleLine="true"/>
+            
+            <TextView
+                android:id="@+id/tvDatePreview"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text=""
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:textColor="#4CAF50"
+                android:gravity="end"
+                android:layout_marginStart="4dp"/>
+        </LinearLayout>
+        
         <!-- Bank Row -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -66,9 +114,9 @@
             android:layout_marginBottom="3dp">
             
             <TextView
-                android:layout_width="50dp"
+                android:layout_width="48dp"
                 android:layout_height="wrap_content"
-                android:text="Bank:"
+                android:text="BANK:"
                 android:textSize="9sp"
                 android:textStyle="bold"
                 android:textColor="#1A237E"/>
@@ -76,14 +124,14 @@
             <EditText
                 android:id="@+id/etLiveBank"
                 android:layout_width="0dp"
-                android:layout_height="24dp"
+                android:layout_height="22dp"
                 android:layout_weight="1"
                 android:hint="-"
                 android:textSize="9sp"
                 android:textColor="#333333"
                 android:textColorHint="#AAAAAA"
                 android:paddingHorizontal="4dp"
-                android:paddingVertical="2dp"
+                android:paddingVertical="0dp"
                 android:background="@drawable/input_bg"
                 android:inputType="text"
                 android:singleLine="true"/>
@@ -98,9 +146,9 @@
             android:layout_marginBottom="3dp">
             
             <TextView
-                android:layout_width="50dp"
+                android:layout_width="48dp"
                 android:layout_height="wrap_content"
-                android:text="Name:"
+                android:text="NAME:"
                 android:textSize="9sp"
                 android:textStyle="bold"
                 android:textColor="#1A237E"/>
@@ -108,14 +156,14 @@
             <EditText
                 android:id="@+id/etLiveName"
                 android:layout_width="0dp"
-                android:layout_height="24dp"
+                android:layout_height="22dp"
                 android:layout_weight="1"
                 android:hint="-"
                 android:textSize="9sp"
                 android:textColor="#333333"
                 android:textColorHint="#AAAAAA"
                 android:paddingHorizontal="4dp"
-                android:paddingVertical="2dp"
+                android:paddingVertical="0dp"
                 android:background="@drawable/input_bg"
                 android:inputType="text"
                 android:singleLine="true"/>
@@ -130,30 +178,30 @@
             android:layout_marginBottom="3dp">
             
             <TextView
-                android:layout_width="50dp"
+                android:layout_width="48dp"
                 android:layout_height="wrap_content"
-                android:text="Reason:"
-                android:textSize="9sp"
+                android:text="REASON:"
+                android:textSize="8sp"
                 android:textStyle="bold"
                 android:textColor="#1A237E"/>
             
             <EditText
                 android:id="@+id/etLiveReason"
                 android:layout_width="0dp"
-                android:layout_height="24dp"
+                android:layout_height="22dp"
                 android:layout_weight="1"
                 android:hint="-"
                 android:textSize="9sp"
                 android:textColor="#333333"
                 android:textColorHint="#AAAAAA"
                 android:paddingHorizontal="4dp"
-                android:paddingVertical="2dp"
+                android:paddingVertical="0dp"
                 android:background="@drawable/input_bg"
                 android:inputType="text"
                 android:singleLine="true"/>
         </LinearLayout>
         
-        <!-- Coords Row -->
+        <!-- Coords Row (LATLONG TO) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -162,24 +210,24 @@
             android:layout_marginBottom="3dp">
             
             <TextView
-                android:layout_width="50dp"
+                android:layout_width="48dp"
                 android:layout_height="wrap_content"
-                android:text="Coords:"
-                android:textSize="9sp"
+                android:text="COORDS:"
+                android:textSize="8sp"
                 android:textStyle="bold"
                 android:textColor="#1A237E"/>
             
             <EditText
                 android:id="@+id/etLiveCoords"
                 android:layout_width="0dp"
-                android:layout_height="24dp"
+                android:layout_height="22dp"
                 android:layout_weight="1"
                 android:hint="22.12,71.12"
                 android:textSize="9sp"
                 android:textColor="#333333"
                 android:textColorHint="#AAAAAA"
                 android:paddingHorizontal="4dp"
-                android:paddingVertical="2dp"
+                android:paddingVertical="0dp"
                 android:background="@drawable/input_bg"
                 android:inputType="text"
                 android:singleLine="true"/>
@@ -191,12 +239,12 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="6dp">
+            android:layout_marginBottom="5dp">
             
             <TextView
-                android:layout_width="50dp"
+                android:layout_width="48dp"
                 android:layout_height="wrap_content"
-                android:text="Area:"
+                android:text="AREA:"
                 android:textSize="9sp"
                 android:textStyle="bold"
                 android:textColor="#1A237E"/>
@@ -204,14 +252,14 @@
             <EditText
                 android:id="@+id/etLiveArea"
                 android:layout_width="0dp"
-                android:layout_height="24dp"
+                android:layout_height="22dp"
                 android:layout_weight="1"
                 android:hint="City"
                 android:textSize="9sp"
                 android:textColor="#333333"
                 android:textColorHint="#AAAAAA"
                 android:paddingHorizontal="4dp"
-                android:paddingVertical="2dp"
+                android:paddingVertical="0dp"
                 android:background="@drawable/input_bg"
                 android:inputType="text"
                 android:singleLine="true"/>
@@ -226,13 +274,13 @@
             <Button
                 android:id="@+id/btnLiveOk"
                 android:layout_width="0dp"
-                android:layout_height="28dp"
+                android:layout_height="26dp"
                 android:layout_weight="1"
                 android:text="OK"
                 android:textSize="10sp"
                 android:textStyle="bold"
                 android:textColor="#FFFFFF"
-                android:textAllCaps="false"
+                android:textAllCaps="true"
                 android:background="@drawable/btn_success_bg"
                 android:layout_marginEnd="3dp"
                 android:minHeight="0dp"
@@ -242,13 +290,13 @@
             <Button
                 android:id="@+id/btnLiveClear"
                 android:layout_width="0dp"
-                android:layout_height="28dp"
+                android:layout_height="26dp"
                 android:layout_weight="1"
-                android:text="Clear"
+                android:text="CLEAR"
                 android:textSize="10sp"
                 android:textStyle="bold"
                 android:textColor="#FFFFFF"
-                android:textAllCaps="false"
+                android:textAllCaps="true"
                 android:background="@drawable/btn_warning_bg"
                 android:layout_marginStart="3dp"
                 android:minHeight="0dp"
