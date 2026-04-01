@@ -130,7 +130,7 @@ public class HistoryActivity extends Activity {
         TextView dateHeader = new TextView(this);
         dateHeader.setText("DATE :- " + date);
         dateHeader.setTextSize(14);
-        dateHeader.setTextStyle(Typeface.BOLD);
+        dateHeader.setTypeface(null, Typeface.BOLD);
         dateHeader.setTextColor(Color.WHITE);
         dateHeader.setBackgroundColor(Color.parseColor(COLOR_DATE_HEADER));
         dateHeader.setPadding(16, 12, 16, 12);
