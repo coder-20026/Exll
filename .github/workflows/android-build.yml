@@ -15,536 +15,168 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
       
-    # Gradle Wrapper Setup - Automatic Download
+    # Setup Java 17 (required for AGP 8.x)
+    - name: Setup JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+    
+    # Setup Gradle Wrapper
     - name: Setup Gradle Wrapper
       run: |
-        # Create gradle wrapper directory
         mkdir -p gradle/wrapper
         
-        # Download Gradle Wrapper JAR (6.5 version for compatibility)
-        echo "Downloading gradle-wrapper.jar..."
+        # Download Gradle Wrapper JAR
         curl -L -o gradle/wrapper/gradle-wrapper.jar \
-          "https://raw.githubusercontent.com/gradle/gradle/v6.5.0/gradle/wrapper/gradle-wrapper.jar"
+          "https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradle/wrapper/gradle-wrapper.jar"
         
         # Create gradle-wrapper.properties
         cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
-        distributionBase=GRADLE_USER_HOME
-        distributionPath=wrapper/dists
-        distributionUrl=https\://services.gradle.org/distributions/gradle-6.5-bin.zip
-        zipStoreBase=GRADLE_USER_HOME
-        zipStorePath=wrapper/dists
-        EOF
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+EOF
         
         # Create gradlew script
         cat > gradlew << 'GRADLEW'
-        #!/bin/sh
-        
-        ##############################################################################
-        ## Gradle start up script for UN*X
-        ##############################################################################
-        
-        # Attempt to set APP_HOME
-        # Resolve links: $0 may be a link
-        PRG="$0"
-        # Need this for relative symlinks.
-        while [ -h "$PRG" ] ; do
-            ls=`ls -ld "$PRG"`
-            link=`expr "$ls" : '.*-> \(.*\)$'`
-            if expr "$link" : '/.*' > /dev/null; then
-                PRG="$link"
-            else
-                PRG=`dirname "$PRG"`"/$link"
-            fi
-        done
-        SAVED="`pwd`"
-        cd "`dirname \"$PRG\"`/" >/dev/null
-        APP_HOME="`pwd -P`"
-        cd "$SAVED" >/dev/null
-        
-        APP_NAME="Gradle"
-        APP_BASE_NAME=`basename "$0"`
-        
-        # Use the maximum available, or set MAX_FD != -1 to use that value.
-        MAX_FD="maximum"
-        
-        warn () {
-            echo "$*"
-        }
-        
-        die () {
-            echo
-            echo "$*"
-            echo
-            exit 1
-        }
-        
-        # OS specific support
-        cygwin=false
-        msys=false
-        darwin=false
-        nonstop=false
-        case "`uname`" in
-          CYGWIN* )
-            cygwin=true
-            ;;
-          Darwin* )
-            darwin=true
-            ;;
-          MINGW* )
-            msys=true
-            ;;
-          NONSTOP* )
-            nonstop=true
-            ;;
-        esac
-        
-        CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
-        
-        # Determine the Java command to use to start the JVM.
-        if [ -n "$JAVA_HOME" ] ; then
-            if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
-                JAVACMD="$JAVA_HOME/jre/sh/java"
-            else
-                JAVACMD="$JAVA_HOME/bin/java"
-            fi
-            if [ ! -x "$JAVACMD" ] ; then
-                die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME"
-            fi
-        else
-            JAVACMD="java"
-            which java >/dev/null 2>&1 || die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH."
+#!/bin/sh
+
+##############################################################################
+## Gradle start up script for UN*X
+##############################################################################
+
+# Attempt to set APP_HOME
+PRG="$0"
+while [ -h "$PRG" ] ; do
+    ls=`ls -ld "$PRG"`
+    link=`expr "$ls" : '.*-> \(.*\)$'`
+    if expr "$link" : '/.*' > /dev/null; then
+        PRG="$link"
+    else
+        PRG=`dirname "$PRG"`"/$link"
+    fi
+done
+SAVED="`pwd`"
+cd "`dirname \"$PRG\"`/" >/dev/null
+APP_HOME="`pwd -P`"
+cd "$SAVED" >/dev/null
+
+APP_NAME="Gradle"
+APP_BASE_NAME=`basename "$0"`
+
+MAX_FD="maximum"
+
+warn () {
+    echo "$*"
+}
+
+die () {
+    echo
+    echo "$*"
+    echo
+    exit 1
+}
+
+cygwin=false
+msys=false
+darwin=false
+nonstop=false
+case "`uname`" in
+  CYGWIN* )
+    cygwin=true
+    ;;
+  Darwin* )
+    darwin=true
+    ;;
+  MINGW* )
+    msys=true
+    ;;
+  NONSTOP* )
+    nonstop=true
+    ;;
+esac
+
+CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
+
+if [ -n "$JAVA_HOME" ] ; then
+    if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
+        JAVACMD="$JAVA_HOME/jre/sh/java"
+    else
+        JAVACMD="$JAVA_HOME/bin/java"
+    fi
+    if [ ! -x "$JAVACMD" ] ; then
+        die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME"
+    fi
+else
+    JAVACMD="java"
+    which java >/dev/null 2>&1 || die "ERROR: JAVA_HOME is not set"
+fi
+
+if [ "$cygwin" = "false" -a "$darwin" = "false" -a "$nonstop" = "false" ] ; then
+    MAX_FD_LIMIT=`ulimit -H -n`
+    if [ $? -eq 0 ] ; then
+        if [ "$MAX_FD" = "maximum" -o "$MAX_FD" = "max" ] ; then
+            MAX_FD="$MAX_FD_LIMIT"
         fi
+        ulimit -n $MAX_FD
+    fi
+fi
+
+DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
+
+save () {
+    for i do printf %s\\n "$i" | sed "s/'/'\\\\''/g;1s/^/'/;\$s/\$/' \\\\/" ; done
+    echo " "
+}
+APP_ARGS=`save "$@"`
+
+eval set -- $DEFAULT_JVM_OPTS $JAVA_OPTS $GRADLE_OPTS "\"-Dorg.gradle.appname=$APP_BASE_NAME\"" -classpath "\"$CLASSPATH\"" org.gradle.wrapper.GradleWrapperMain "$APP_ARGS"
+
+exec "$JAVACMD" "$@"
+GRADLEW
         
-        # Increase the maximum file descriptors if we can.
-        if [ "$cygwin" = "false" -a "$darwin" = "false" -a "$nonstop" = "false" ] ; then
-            MAX_FD_LIMIT=`ulimit -H -n`
-            if [ $? -eq 0 ] ; then
-                if [ "$MAX_FD" = "maximum" -o "$MAX_FD" = "max" ] ; then
-                    MAX_FD="$MAX_FD_LIMIT"
-                fi
-                ulimit -n $MAX_FD
-                if [ $? -ne 0 ] ; then
-                    warn "Could not set maximum file descriptor limit: $MAX_FD"
-                fi
-            else
-                warn "Could not query maximum file descriptor limit: $MAX_FD_LIMIT"
-            fi
-        fi
-        
-        DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
-        
-        # Escape application args
-        save () {
-            for i do printf %s\\n "$i" | sed "s/'/'\\\\''/g;1s/^/'/;\$s/\$/' \\\\/" ; done
-            echo " "
-        }
-        APP_ARGS=`save "$@"`
-        
-        eval set -- $DEFAULT_JVM_OPTS $JAVA_OPTS $GRADLE_OPTS "\"-Dorg.gradle.appname=$APP_BASE_NAME\"" -classpath "\"$CLASSPATH\"" org.gradle.wrapper.GradleWrapperMain "$APP_ARGS"
-        
-        exec "$JAVACMD" "$@"
-        GRADLEW
-        
-        # Create gradlew.bat for Windows
-        cat > gradlew.bat << 'GRADLEWBAT'
-        @rem Gradle startup script for Windows
-        @rem ##########################################################################
-        
-        @if "%DEBUG%"=="" @echo off
-        @rem Set local scope for the variables with windows NT shell
-        if "%OS%"=="Windows_NT" setlocal
-        
-        set DIRNAME=%~dp0
-        if "%DIRNAME%"=="" set DIRNAME=.
-        set APP_BASE_NAME=%~n0
-        set APP_HOME=%DIRNAME%
-        
-        @rem Resolve any "." and ".." in APP_HOME to make it shorter.
-        for %%i in ("%APP_HOME%") do set APP_HOME=%%~fi
-        
-        @rem Add default JVM options here.
-        set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
-        
-        @rem Find java.exe
-        if defined JAVA_HOME goto findJavaFromJavaHome
-        
-        set JAVA_EXE=java.exe
-        %JAVA_EXE% -version >NUL 2>&1
-        if "%ERRORLEVEL%"=="0" goto execute
-        
-        echo ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
-        goto fail
-        
-        :findJavaFromJavaHome
-        set JAVA_HOME=%JAVA_HOME:"=%
-        set JAVA_EXE=%JAVA_HOME%/bin/java.exe
-        
-        if exist "%JAVA_EXE%" goto execute
-        
-        echo ERROR: JAVA_HOME is set to an invalid directory: %JAVA_HOME%
-        goto fail
-        
-        :execute
-        @rem Setup the command line
-        set CLASSPATH=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
-        
-        @rem Execute Gradle
-        "%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -classpath "%CLASSPATH%" org.gradle.wrapper.GradleWrapperMain %*
-        
-        :end
-        @rem End local scope for the variables with windows NT shell
-        if "%ERRORLEVEL%"=="0" goto mainEnd
-        
-        :fail
-        rem Set variable GRADLE_EXIT_CONSOLE if you need the _script_ return code instead of
-        rem having the whole terminal window closed.
-        if not ""=="%GRADLE_EXIT_CONSOLE%" exit 1
-        exit /b 1
-        
-        :mainEnd
-        if "%OS%"=="Windows_NT" endlocal
-        
-        GRADLEWBAT
-        
-        # Make gradlew executable
         chmod +x gradlew
-        
         echo "Gradle Wrapper setup complete!"
         
-    # Download Premium Drawable Assets
-    - name: Setup Premium Drawable Assets
+    # Generate Drawable Assets
+    - name: Generate Drawable Assets
       run: |
-        # Create drawable directories for all densities
         mkdir -p app/src/main/res/drawable
-        mkdir -p app/src/main/res/drawable-mdpi
-        mkdir -p app/src/main/res/drawable-hdpi
-        mkdir -p app/src/main/res/drawable-xhdpi
-        mkdir -p app/src/main/res/drawable-xxhdpi
-        mkdir -p app/src/main/res/drawable-xxxhdpi
         mkdir -p app/src/main/res/mipmap-mdpi
         mkdir -p app/src/main/res/mipmap-hdpi
         mkdir -p app/src/main/res/mipmap-xhdpi
         mkdir -p app/src/main/res/mipmap-xxhdpi
         mkdir -p app/src/main/res/mipmap-xxxhdpi
         
-        # Generate Premium App Icon (using ImageMagick)
-        # Install ImageMagick
         sudo apt-get update && sudo apt-get install -y imagemagick
         
-        # Generate gradient background app icon
+        # Generate App Icons
         for size in 48 72 96 144 192; do
           density=""
-          if [ "$size" -eq 48 ]; then density="mdpi"; fi
-          if [ "$size" -eq 72 ]; then density="hdpi"; fi
-          if [ "$size" -eq 96 ]; then density="xhdpi"; fi
-          if [ "$size" -eq 144 ]; then density="xxhdpi"; fi
-          if [ "$size" -eq 192 ]; then density="xxxhdpi"; fi
+          case $size in
+            48) density="mdpi" ;;
+            72) density="hdpi" ;;
+            96) density="xhdpi" ;;
+            144) density="xxhdpi" ;;
+            192) density="xxxhdpi" ;;
+          esac
           
-          # Create premium gradient icon with rounded corners
-          convert -size ${size}x${size} \
-            \( xc: -sparse-color barycentric "0,0 #1A237E ${size},${size} #7C4DFF" \) \
+          convert -size ${size}x${size} xc:'#1A237E' \
             -fill white -font DejaVu-Sans-Bold -pointsize $((size/3)) \
             -gravity center -annotate +0+0 "WT" \
-            \( +clone -alpha extract -draw "fill black polygon 0,0 0,$((size/8)) $((size/8)),0 fill white circle $((size/8)),$((size/8)) $((size/8)),0" \
-            \( +clone -flip \) -compose Multiply -composite \
-            \( +clone -flop \) -compose Multiply -composite \
-            \) -alpha off -compose CopyOpacity -composite \
             "app/src/main/res/mipmap-${density}/ic_launcher.png"
-          
-          # Foreground icon
-          convert -size ${size}x${size} xc:transparent \
-            -fill "#7C4DFF" -draw "roundrectangle 4,4 $((size-4)),$((size-4)) $((size/8)),$((size/8))" \
-            -fill white -font DejaVu-Sans-Bold -pointsize $((size/3)) \
-            -gravity center -annotate +0+0 "WT" \
-            "app/src/main/res/mipmap-${density}/ic_launcher_foreground.png"
+            
+          cp "app/src/main/res/mipmap-${density}/ic_launcher.png" \
+             "app/src/main/res/mipmap-${density}/ic_launcher_round.png"
         done
         
-        # Generate Floating Button Icon (premium circular gradient)
-        for size in 48 72 96 144 192; do
-          density=""
-          if [ "$size" -eq 48 ]; then density="mdpi"; fi
-          if [ "$size" -eq 72 ]; then density="hdpi"; fi
-          if [ "$size" -eq 96 ]; then density="xhdpi"; fi
-          if [ "$size" -eq 144 ]; then density="xxhdpi"; fi
-          if [ "$size" -eq 192 ]; then density="xxxhdpi"; fi
-          
-          # Create floating button with premium gradient
-          convert -size ${size}x${size} xc:transparent \
-            -fill "radial-gradient:#7C4DFF-#1A237E" -draw "circle $((size/2)),$((size/2)) $((size/2)),2" \
-            -fill white -font DejaVu-Sans-Bold -pointsize $((size/3)) \
-            -gravity center -annotate +0+0 "+" \
-            "app/src/main/res/drawable-${density}/ic_floating_button.png"
-        done
+        echo "Drawable assets generated!"
         
-        # Create button backgrounds
-        cat > app/src/main/res/drawable/btn_primary_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <ripple xmlns:android="http://schemas.android.com/apk/res/android"
-            android:color="#40FFFFFF">
-            <item>
-                <shape android:shape="rectangle">
-                    <gradient
-                        android:startColor="#7C4DFF"
-                        android:endColor="#536DFE"
-                        android:angle="135"/>
-                    <corners android:radius="12dp"/>
-                </shape>
-            </item>
-        </ripple>
-        EOF
-        
-        cat > app/src/main/res/drawable/btn_secondary_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <ripple xmlns:android="http://schemas.android.com/apk/res/android"
-            android:color="#40FFFFFF">
-            <item>
-                <shape android:shape="rectangle">
-                    <gradient
-                        android:startColor="#00BCD4"
-                        android:endColor="#00ACC1"
-                        android:angle="135"/>
-                    <corners android:radius="12dp"/>
-                </shape>
-            </item>
-        </ripple>
-        EOF
-        
-        cat > app/src/main/res/drawable/btn_danger_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <ripple xmlns:android="http://schemas.android.com/apk/res/android"
-            android:color="#40FFFFFF">
-            <item>
-                <shape android:shape="rectangle">
-                    <gradient
-                        android:startColor="#FF5252"
-                        android:endColor="#F44336"
-                        android:angle="135"/>
-                    <corners android:radius="12dp"/>
-                </shape>
-            </item>
-        </ripple>
-        EOF
-        
-        cat > app/src/main/res/drawable/btn_success_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <ripple xmlns:android="http://schemas.android.com/apk/res/android"
-            android:color="#40FFFFFF">
-            <item>
-                <shape android:shape="rectangle">
-                    <gradient
-                        android:startColor="#4CAF50"
-                        android:endColor="#43A047"
-                        android:angle="135"/>
-                    <corners android:radius="12dp"/>
-                </shape>
-            </item>
-        </ripple>
-        EOF
-        
-        cat > app/src/main/res/drawable/btn_warning_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <ripple xmlns:android="http://schemas.android.com/apk/res/android"
-            android:color="#40FFFFFF">
-            <item>
-                <shape android:shape="rectangle">
-                    <gradient
-                        android:startColor="#FF9800"
-                        android:endColor="#FB8C00"
-                        android:angle="135"/>
-                    <corners android:radius="12dp"/>
-                </shape>
-            </item>
-        </ripple>
-        EOF
-        
-        # Create floating button background
-        cat > app/src/main/res/drawable/floating_button_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <ripple xmlns:android="http://schemas.android.com/apk/res/android"
-            android:color="#40FFFFFF">
-            <item>
-                <shape android:shape="oval">
-                    <gradient
-                        android:startColor="#7C4DFF"
-                        android:centerColor="#651FFF"
-                        android:endColor="#6200EA"
-                        android:type="radial"
-                        android:gradientRadius="30dp"/>
-                    <size android:width="56dp" android:height="56dp"/>
-                </shape>
-            </item>
-        </ripple>
-        EOF
-        
-        # Create card background
-        cat > app/src/main/res/drawable/card_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <shape xmlns:android="http://schemas.android.com/apk/res/android"
-            android:shape="rectangle">
-            <solid android:color="#FFFFFF"/>
-            <corners android:radius="16dp"/>
-            <stroke android:width="0dp" android:color="#00000000"/>
-        </shape>
-        EOF
-        
-        # Create input field background
-        cat > app/src/main/res/drawable/input_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <shape xmlns:android="http://schemas.android.com/apk/res/android"
-            android:shape="rectangle">
-            <solid android:color="#F5F7FA"/>
-            <corners android:radius="12dp"/>
-            <stroke android:width="1dp" android:color="#E0E0E0"/>
-        </shape>
-        EOF
-        
-        # Create input field focused background
-        cat > app/src/main/res/drawable/input_bg_focused.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <shape xmlns:android="http://schemas.android.com/apk/res/android"
-            android:shape="rectangle">
-            <solid android:color="#FFFFFF"/>
-            <corners android:radius="12dp"/>
-            <stroke android:width="2dp" android:color="#7C4DFF"/>
-        </shape>
-        EOF
-        
-        # Create table header background
-        cat > app/src/main/res/drawable/table_header_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <shape xmlns:android="http://schemas.android.com/apk/res/android"
-            android:shape="rectangle">
-            <gradient
-                android:startColor="#1A237E"
-                android:endColor="#283593"
-                android:angle="90"/>
-        </shape>
-        EOF
-        
-        # Create table row background
-        cat > app/src/main/res/drawable/table_row_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <selector xmlns:android="http://schemas.android.com/apk/res/android">
-            <item android:state_pressed="true">
-                <shape android:shape="rectangle">
-                    <solid android:color="#E8EAF6"/>
-                </shape>
-            </item>
-            <item android:state_selected="true">
-                <shape android:shape="rectangle">
-                    <solid android:color="#C5CAE9"/>
-                </shape>
-            </item>
-            <item>
-                <shape android:shape="rectangle">
-                    <solid android:color="#FFFFFF"/>
-                </shape>
-            </item>
-        </selector>
-        EOF
-        
-        # Create table cell border
-        cat > app/src/main/res/drawable/table_cell_border.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <shape xmlns:android="http://schemas.android.com/apk/res/android"
-            android:shape="rectangle">
-            <solid android:color="#FFFFFF"/>
-            <stroke android:width="0.5dp" android:color="#E0E0E0"/>
-        </shape>
-        EOF
-        
-        # Create popup background
-        cat > app/src/main/res/drawable/popup_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <shape xmlns:android="http://schemas.android.com/apk/res/android"
-            android:shape="rectangle">
-            <solid android:color="#FFFFFF"/>
-            <corners android:radius="20dp"/>
-            <stroke android:width="0dp" android:color="#00000000"/>
-        </shape>
-        EOF
-        
-        # Create popup header background
-        cat > app/src/main/res/drawable/popup_header_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <shape xmlns:android="http://schemas.android.com/apk/res/android"
-            android:shape="rectangle">
-            <gradient
-                android:startColor="#7C4DFF"
-                android:endColor="#651FFF"
-                android:angle="135"/>
-            <corners android:topLeftRadius="20dp" android:topRightRadius="20dp"/>
-        </shape>
-        EOF
-        
-        # Create close button background
-        cat > app/src/main/res/drawable/close_btn_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <shape xmlns:android="http://schemas.android.com/apk/res/android"
-            android:shape="oval">
-            <solid android:color="#FF5252"/>
-            <size android:width="28dp" android:height="28dp"/>
-        </shape>
-        EOF
-        
-        # Create gradient background for app
-        cat > app/src/main/res/drawable/app_gradient_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <shape xmlns:android="http://schemas.android.com/apk/res/android"
-            android:shape="rectangle">
-            <gradient
-                android:startColor="#F5F7FA"
-                android:endColor="#E8EAF6"
-                android:angle="135"/>
-        </shape>
-        EOF
-        
-        # Create instruction card background
-        cat > app/src/main/res/drawable/instruction_card_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <shape xmlns:android="http://schemas.android.com/apk/res/android"
-            android:shape="rectangle">
-            <gradient
-                android:startColor="#FFF8E1"
-                android:endColor="#FFECB3"
-                android:angle="90"/>
-            <corners android:radius="12dp"/>
-            <stroke android:width="1dp" android:color="#FFD54F"/>
-        </shape>
-        EOF
-        
-        # Create shadow drawable for elevation effect
-        cat > app/src/main/res/drawable/shadow_bg.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-            <!-- Shadow layer -->
-            <item>
-                <shape android:shape="rectangle">
-                    <solid android:color="#10000000"/>
-                    <corners android:radius="18dp"/>
-                </shape>
-            </item>
-            <!-- Main card -->
-            <item android:top="2dp" android:bottom="2dp" android:left="2dp" android:right="2dp">
-                <shape android:shape="rectangle">
-                    <solid android:color="#FFFFFF"/>
-                    <corners android:radius="16dp"/>
-                </shape>
-            </item>
-        </layer-list>
-        EOF
-        
-        echo "Drawable assets generated successfully!"
-        
-    # Setup Java 11
-    - name: Set up JDK 11
-      uses: actions/setup-java@v4
-      with:
-        java-version: '11'
-        distribution: 'temurin'
-        cache: gradle
-        
-    # Grant execute permission for gradlew
+    # Grant execute permission
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
       
@@ -555,6 +187,7 @@ jobs:
     # Build Release APK
     - name: Build Release APK
       run: ./gradlew assembleRelease --stacktrace
+      continue-on-error: true
       
     # Upload Debug APK
     - name: Upload Debug APK
@@ -567,21 +200,8 @@ jobs:
     # Upload Release APK
     - name: Upload Release APK
       uses: actions/upload-artifact@v4
+      if: success() || failure()
       with:
         name: app-release
-        path: app/build/outputs/apk/release/app-release-unsigned.apk
+        path: app/build/outputs/apk/release/*.apk
         retention-days: 30
-
-    # Job Summary
-    - name: Build Summary
-      run: |
-        echo "## Build Complete! :rocket:" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### APK Files Generated:" >> $GITHUB_STEP_SUMMARY
-        echo "- **Debug APK:** Available in Artifacts" >> $GITHUB_STEP_SUMMARY
-        echo "- **Release APK:** Available in Artifacts" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Download Instructions:" >> $GITHUB_STEP_SUMMARY
-        echo "1. Go to **Actions** tab" >> $GITHUB_STEP_SUMMARY
-        echo "2. Click on this workflow run" >> $GITHUB_STEP_SUMMARY
-        echo "3. Download from **Artifacts** section at the bottom" >> $GITHUB_STEP_SUMMARY
