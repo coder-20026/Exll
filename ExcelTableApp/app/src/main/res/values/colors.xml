@@ -52,12 +52,14 @@
     <color name="colorTableRowPressed">#E8EAF6</color>
     <color name="colorTableBorder">#E0E0E0</color>
     
-    <!-- Excel-style Selection Colors -->
-    <color name="colorCellSelected">#D1C4E9</color>
-    <color name="colorCellSelectedBorder">#9575CD</color>
+    <!-- Excel-style Selection Colors (Excel-like green/blue theme) -->
+    <color name="colorCellSelected">#C8E6FA</color>
+    <color name="colorCellSelectedBorder">#4A90D9</color>
     <color name="colorCellActive">#FFFFFF</color>
-    <color name="colorCellActiveBorder">#1A237E</color>
-    <color name="colorSelectionHighlight">#B39DDB</color>
+    <color name="colorCellActiveBorder">#217346</color>
+    <color name="colorSelectionHighlight">#B8D4F0</color>
+    <color name="colorDragHandle">#217346</color>
+    <color name="colorSelectionOuterBorder">#217346</color>
     
     <!-- Instruction Card -->
     <color name="colorInstructionBg">#FFF8E1</color>
