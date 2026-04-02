@@ -48,6 +48,17 @@
             android:layout_marginEnd="4dp" />
 
         <Button
+            android:id="@+id/btnBorders"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:text="Borders"
+            android:textSize="10sp"
+            android:background="@drawable/btn_primary_bg"
+            android:textColor="#FFFFFF"
+            android:paddingHorizontal="8dp"
+            android:layout_marginEnd="4dp" />
+
+        <Button
             android:id="@+id/btnHistory"
             android:layout_width="wrap_content"
             android:layout_height="30dp"
@@ -68,6 +79,11 @@
             android:textColor="#FFFFFF"
             android:paddingHorizontal="10dp" />
     </LinearLayout>
+
+    <!-- Border Panel (Initially Hidden) -->
+    <include
+        layout="@layout/border_panel_layout"
+        android:id="@+id/borderPanelInclude" />
 
     <!-- Current Date Display -->
     <LinearLayout
