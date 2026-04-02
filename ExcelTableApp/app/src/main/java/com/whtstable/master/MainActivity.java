@@ -154,7 +154,7 @@ public class MainActivity extends Activity {
         cellA.setTextColor(Color.BLACK);
         cellA.setGravity(Gravity.CENTER);
         cellA.setPadding(dpToPx(1), dpToPx(1), dpToPx(1), dpToPx(1));
-        cellA.setBackgroundResource(R.drawable.excel_border_thin);
+        cellA.setBackgroundResource(R.drawable.excel_border_medium);
         cellA.setTag("cellA");
         LinearLayout.LayoutParams paramsA = new LinearLayout.LayoutParams(
             dpToPx(COLUMN_WIDTHS[0]),
@@ -218,7 +218,7 @@ public class MainActivity extends Activity {
         et.setTextColor(Color.BLACK);
         et.setGravity(gravity);
         et.setPadding(dpToPx(2), dpToPx(1), dpToPx(2), dpToPx(1));
-        et.setBackgroundResource(R.drawable.excel_border_thin);
+        et.setBackgroundResource(R.drawable.excel_border_medium);
         et.setSingleLine(true);
         et.setTag(tag);
         
@@ -385,7 +385,7 @@ public class MainActivity extends Activity {
     private void selectRow(int rowIndex) {
         // Deselect previous row
         if (selectedRowIndex != -1 && selectedRowIndex < allDataRows.size()) {
-            setRowBackground(allDataRows.get(selectedRowIndex), R.drawable.excel_border_thin);
+            setRowBackground(allDataRows.get(selectedRowIndex), R.drawable.excel_border_medium);
         }
         
         // Select new row
