@@ -183,20 +183,20 @@
         android:background="@drawable/excel_summary_outer"
         android:layout_marginStart="337dp">
         
-        <!-- Row 19: Headers for Summary - All with THICK borders -->
+        <!-- Row 19: Headers for Summary - THICK borders (Top Row) -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="17dp"
             android:orientation="horizontal">
             
-            <!-- F19: Blank -->
+            <!-- F19: Blank - THICK -->
             <TextView
                 android:layout_width="92dp"
                 android:layout_height="match_parent"
                 android:text=""
                 android:background="@drawable/excel_border_thick"/>
             
-            <!-- G19: NO. OF COUNT -->
+            <!-- G19: NO. OF COUNT - THICK -->
             <TextView
                 android:layout_width="95dp"
                 android:layout_height="match_parent"
@@ -207,7 +207,7 @@
                 android:gravity="center"
                 android:background="@drawable/excel_border_thick"/>
             
-            <!-- H19: AMOUNT -->
+            <!-- H19: AMOUNT - THICK -->
             <TextView
                 android:layout_width="89dp"
                 android:layout_height="match_parent"
@@ -219,7 +219,7 @@
                 android:background="@drawable/excel_border_thick"/>
         </LinearLayout>
         
-        <!-- Row 20: TOTAL KM - All with THICK borders -->
+        <!-- Row 20: TOTAL KM - THIN/MEDIUM borders (Inner Row) -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="25dp"
@@ -233,30 +233,32 @@
                 android:textStyle="bold"
                 android:textColor="#000000"
                 android:gravity="center"
-                android:background="@drawable/excel_border_thick"/>
+                android:background="@drawable/excel_border_medium"/>
             
-            <TextView
-                android:id="@+id/cellG20"
+            <EditText
+                android:id="@+id/cellTotalKmCount"
                 android:layout_width="95dp"
                 android:layout_height="match_parent"
                 android:text=""
                 android:textSize="9sp"
                 android:textColor="#000000"
                 android:gravity="center"
-                android:background="@drawable/excel_border_thick"/>
+                android:inputType="number"
+                android:background="@drawable/excel_border_medium"/>
             
-            <TextView
-                android:id="@+id/cellH20"
+            <EditText
+                android:id="@+id/cellTotalKmAmount"
                 android:layout_width="89dp"
                 android:layout_height="match_parent"
                 android:text=""
                 android:textSize="9sp"
                 android:textColor="#000000"
                 android:gravity="center"
-                android:background="@drawable/excel_border_thick"/>
+                android:inputType="numberDecimal"
+                android:background="@drawable/excel_border_medium"/>
         </LinearLayout>
         
-        <!-- Row 21: LUNCH - All with THICK borders -->
+        <!-- Row 21: LUNCH - THIN/MEDIUM borders (Inner Row) -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="25dp"
@@ -270,30 +272,32 @@
                 android:textStyle="bold"
                 android:textColor="#000000"
                 android:gravity="center"
-                android:background="@drawable/excel_border_thick"/>
+                android:background="@drawable/excel_border_medium"/>
             
-            <TextView
-                android:id="@+id/cellG21"
+            <EditText
+                android:id="@+id/cellLunchCount"
                 android:layout_width="95dp"
                 android:layout_height="match_parent"
                 android:text=""
                 android:textSize="9sp"
                 android:textColor="#000000"
                 android:gravity="center"
-                android:background="@drawable/excel_border_thick"/>
+                android:inputType="number"
+                android:background="@drawable/excel_border_medium"/>
             
-            <TextView
-                android:id="@+id/cellH21"
+            <EditText
+                android:id="@+id/cellLunchAmount"
                 android:layout_width="89dp"
                 android:layout_height="match_parent"
                 android:text=""
                 android:textSize="9sp"
                 android:textColor="#000000"
                 android:gravity="center"
-                android:background="@drawable/excel_border_thick"/>
+                android:inputType="numberDecimal"
+                android:background="@drawable/excel_border_medium"/>
         </LinearLayout>
         
-        <!-- Row 22: VISIT - All with THICK borders -->
+        <!-- Row 22: VISIT - THIN/MEDIUM borders (Inner Row) -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="25dp"
@@ -307,30 +311,32 @@
                 android:textStyle="bold"
                 android:textColor="#000000"
                 android:gravity="center"
-                android:background="@drawable/excel_border_thick"/>
+                android:background="@drawable/excel_border_medium"/>
             
-            <TextView
-                android:id="@+id/cellG22"
+            <EditText
+                android:id="@+id/cellVisitCount"
                 android:layout_width="95dp"
                 android:layout_height="match_parent"
                 android:text=""
                 android:textSize="9sp"
                 android:textColor="#000000"
                 android:gravity="center"
-                android:background="@drawable/excel_border_thick"/>
+                android:inputType="number"
+                android:background="@drawable/excel_border_medium"/>
             
-            <TextView
-                android:id="@+id/cellH22"
+            <EditText
+                android:id="@+id/cellVisitAmount"
                 android:layout_width="89dp"
                 android:layout_height="match_parent"
                 android:text=""
                 android:textSize="9sp"
                 android:textColor="#000000"
                 android:gravity="center"
-                android:background="@drawable/excel_border_thick"/>
+                android:inputType="numberDecimal"
+                android:background="@drawable/excel_border_medium"/>
         </LinearLayout>
         
-        <!-- Row 23: OTHER - All with THICK borders -->
+        <!-- Row 23: OTHER - THIN/MEDIUM borders (Inner Row) -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="26dp"
@@ -344,36 +350,38 @@
                 android:textStyle="bold"
                 android:textColor="#000000"
                 android:gravity="center"
-                android:background="@drawable/excel_border_thick"/>
+                android:background="@drawable/excel_border_medium"/>
             
-            <TextView
-                android:id="@+id/cellG23"
+            <EditText
+                android:id="@+id/cellOtherCount"
                 android:layout_width="95dp"
                 android:layout_height="match_parent"
                 android:text=""
                 android:textSize="9sp"
                 android:textColor="#000000"
                 android:gravity="center"
-                android:background="@drawable/excel_border_thick"/>
+                android:inputType="number"
+                android:background="@drawable/excel_border_medium"/>
             
-            <TextView
-                android:id="@+id/cellH23"
+            <EditText
+                android:id="@+id/cellOtherAmount"
                 android:layout_width="89dp"
                 android:layout_height="match_parent"
                 android:text=""
                 android:textSize="9sp"
                 android:textColor="#000000"
                 android:gravity="center"
-                android:background="@drawable/excel_border_thick"/>
+                android:inputType="numberDecimal"
+                android:background="@drawable/excel_border_medium"/>
         </LinearLayout>
         
-        <!-- Row 24: TOTAL AMOUNT (F24+G24 Merged) - All with THICK borders -->
+        <!-- Row 24: TOTAL AMOUNT - THICK borders (Bottom Row) -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="15dp"
             android:orientation="horizontal">
             
-            <!-- F24+G24 Merged: TOTAL AMOUNT -->
+            <!-- F24+G24 Merged: TOTAL AMOUNT - THICK -->
             <TextView
                 android:layout_width="187dp"
                 android:layout_height="match_parent"
@@ -384,8 +392,9 @@
                 android:gravity="center"
                 android:background="@drawable/excel_border_thick"/>
             
-            <TextView
-                android:id="@+id/cellH24"
+            <!-- H24: Final Total Value - THICK -->
+            <EditText
+                android:id="@+id/cellFinalTotal"
                 android:layout_width="89dp"
                 android:layout_height="match_parent"
                 android:text=""
@@ -393,6 +402,7 @@
                 android:textStyle="bold"
                 android:textColor="#000000"
                 android:gravity="center"
+                android:inputType="numberDecimal"
                 android:background="@drawable/excel_border_thick"/>
         </LinearLayout>
     </LinearLayout>
