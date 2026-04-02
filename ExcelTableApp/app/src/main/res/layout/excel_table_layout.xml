@@ -168,251 +168,243 @@
         android:orientation="horizontal"
         android:background="@drawable/excel_data_thin"/>
 
-    <!-- Bottom Summary Table (Row 19-24) - OUTER THICK BORDER -->
+    <!-- Bottom Summary Table (Row 19-24) -->
+    <!-- Summary table ke liye wrapper with thick outer border -->
     <LinearLayout
-        android:id="@+id/summaryTableContainer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/excel_summary_outer"
-        android:padding="0dp">
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
         
-        <!-- Row 19: Headers for Summary - THICK BORDER -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="17dp"
-            android:orientation="horizontal">
-            
-            <!-- Spacer for columns A-E -->
-            <View
-                android:layout_width="337dp"
-                android:layout_height="match_parent"/>
-            
-            <!-- F19: Blank (THICK BORDER) -->
-            <TextView
-                android:layout_width="92dp"
-                android:layout_height="match_parent"
-                android:text=""
-                android:background="@drawable/excel_summary_header"/>
-            
-            <!-- G19: NO. OF COUNT (THICK BORDER) -->
-            <TextView
-                android:layout_width="95dp"
-                android:layout_height="match_parent"
-                android:text="NO. OF COUNT"
-                android:textSize="8sp"
-                android:textStyle="bold"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_header"/>
-            
-            <!-- H19: AMOUNT (THICK BORDER) -->
-            <TextView
-                android:layout_width="89dp"
-                android:layout_height="match_parent"
-                android:text="AMOUNT"
-                android:textSize="8sp"
-                android:textStyle="bold"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_header"/>
-        </LinearLayout>
+        <!-- Left spacer -->
+        <View
+            android:layout_width="241dp"
+            android:layout_height="match_parent"/>
         
-        <!-- Row 20: TOTAL KM - INNER THIN BORDER -->
+        <!-- Summary Table with THICK OUTER BORDER (3dp) -->
         <LinearLayout
+            android:id="@+id/summaryTableContainer"
             android:layout_width="wrap_content"
-            android:layout_height="25dp"
-            android:orientation="horizontal">
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/excel_summary_outer">
             
-            <View
-                android:layout_width="337dp"
-                android:layout_height="match_parent"/>
+            <!-- Row 19: Headers for Summary - THICK BORDER (2dp) -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="22dp"
+                android:orientation="horizontal">
+                
+                <!-- F19: Blank cell -->
+                <TextView
+                    android:layout_width="96dp"
+                    android:layout_height="match_parent"
+                    android:text=""
+                    android:background="@drawable/excel_summary_header"/>
+                
+                <!-- G19: NO. OF COUNT -->
+                <TextView
+                    android:layout_width="99dp"
+                    android:layout_height="match_parent"
+                    android:text="NO. OF COUNT"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:gravity="center"
+                    android:background="@drawable/excel_summary_header"/>
+                
+                <!-- H19: AMOUNT -->
+                <TextView
+                    android:layout_width="81dp"
+                    android:layout_height="match_parent"
+                    android:text="AMOUNT"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:gravity="center"
+                    android:background="@drawable/excel_summary_header"/>
+            </LinearLayout>
             
-            <TextView
-                android:layout_width="92dp"
-                android:layout_height="match_parent"
-                android:text="TOTAL KM"
-                android:textSize="9sp"
-                android:textStyle="bold"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_inner"/>
+            <!-- Row 20: TOTAL KM - THIN BORDER (0.5dp) -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="25dp"
+                android:orientation="horizontal">
+                
+                <TextView
+                    android:layout_width="96dp"
+                    android:layout_height="match_parent"
+                    android:text="TOTAL KM"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:gravity="center_vertical|start"
+                    android:paddingStart="4dp"
+                    android:background="@drawable/excel_summary_inner"/>
+                
+                <TextView
+                    android:id="@+id/cellG20"
+                    android:layout_width="99dp"
+                    android:layout_height="match_parent"
+                    android:text=""
+                    android:textSize="9sp"
+                    android:textColor="#000000"
+                    android:gravity="center"
+                    android:background="@drawable/excel_summary_inner"/>
+                
+                <TextView
+                    android:id="@+id/cellH20"
+                    android:layout_width="81dp"
+                    android:layout_height="match_parent"
+                    android:text=""
+                    android:textSize="9sp"
+                    android:textColor="#000000"
+                    android:gravity="center"
+                    android:background="@drawable/excel_summary_inner"/>
+            </LinearLayout>
             
-            <TextView
-                android:id="@+id/cellG20"
-                android:layout_width="95dp"
-                android:layout_height="match_parent"
-                android:text=""
-                android:textSize="9sp"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_inner"/>
+            <!-- Row 21: LUNCH - THIN BORDER -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="25dp"
+                android:orientation="horizontal">
+                
+                <TextView
+                    android:layout_width="96dp"
+                    android:layout_height="match_parent"
+                    android:text="LUNCH"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:gravity="center_vertical|start"
+                    android:paddingStart="4dp"
+                    android:background="@drawable/excel_summary_inner"/>
+                
+                <TextView
+                    android:id="@+id/cellG21"
+                    android:layout_width="99dp"
+                    android:layout_height="match_parent"
+                    android:text=""
+                    android:textSize="9sp"
+                    android:textColor="#000000"
+                    android:gravity="center"
+                    android:background="@drawable/excel_summary_inner"/>
+                
+                <TextView
+                    android:id="@+id/cellH21"
+                    android:layout_width="81dp"
+                    android:layout_height="match_parent"
+                    android:text=""
+                    android:textSize="9sp"
+                    android:textColor="#000000"
+                    android:gravity="center"
+                    android:background="@drawable/excel_summary_inner"/>
+            </LinearLayout>
             
-            <TextView
-                android:id="@+id/cellH20"
-                android:layout_width="89dp"
-                android:layout_height="match_parent"
-                android:text=""
-                android:textSize="9sp"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_inner"/>
-        </LinearLayout>
-        
-        <!-- Row 21: LUNCH - INNER THIN BORDER -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="25dp"
-            android:orientation="horizontal">
+            <!-- Row 22: VISIT - THIN BORDER -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="25dp"
+                android:orientation="horizontal">
+                
+                <TextView
+                    android:layout_width="96dp"
+                    android:layout_height="match_parent"
+                    android:text="VISIT"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:gravity="center_vertical|start"
+                    android:paddingStart="4dp"
+                    android:background="@drawable/excel_summary_inner"/>
+                
+                <TextView
+                    android:id="@+id/cellG22"
+                    android:layout_width="99dp"
+                    android:layout_height="match_parent"
+                    android:text=""
+                    android:textSize="9sp"
+                    android:textColor="#000000"
+                    android:gravity="center"
+                    android:background="@drawable/excel_summary_inner"/>
+                
+                <TextView
+                    android:id="@+id/cellH22"
+                    android:layout_width="81dp"
+                    android:layout_height="match_parent"
+                    android:text=""
+                    android:textSize="9sp"
+                    android:textColor="#000000"
+                    android:gravity="center"
+                    android:background="@drawable/excel_summary_inner"/>
+            </LinearLayout>
             
-            <View
-                android:layout_width="337dp"
-                android:layout_height="match_parent"/>
+            <!-- Row 23: OTHER - THIN BORDER -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="25dp"
+                android:orientation="horizontal">
+                
+                <TextView
+                    android:layout_width="96dp"
+                    android:layout_height="match_parent"
+                    android:text="OTHER"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:gravity="center_vertical|start"
+                    android:paddingStart="4dp"
+                    android:background="@drawable/excel_summary_inner"/>
+                
+                <TextView
+                    android:id="@+id/cellG23"
+                    android:layout_width="99dp"
+                    android:layout_height="match_parent"
+                    android:text=""
+                    android:textSize="9sp"
+                    android:textColor="#000000"
+                    android:gravity="center"
+                    android:background="@drawable/excel_summary_inner"/>
+                
+                <TextView
+                    android:id="@+id/cellH23"
+                    android:layout_width="81dp"
+                    android:layout_height="match_parent"
+                    android:text=""
+                    android:textSize="9sp"
+                    android:textColor="#000000"
+                    android:gravity="center"
+                    android:background="@drawable/excel_summary_inner"/>
+            </LinearLayout>
             
-            <TextView
-                android:layout_width="92dp"
-                android:layout_height="match_parent"
-                android:text="LUNCH"
-                android:textSize="9sp"
-                android:textStyle="bold"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_inner"/>
-            
-            <TextView
-                android:id="@+id/cellG21"
-                android:layout_width="95dp"
-                android:layout_height="match_parent"
-                android:text=""
-                android:textSize="9sp"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_inner"/>
-            
-            <TextView
-                android:id="@+id/cellH21"
-                android:layout_width="89dp"
-                android:layout_height="match_parent"
-                android:text=""
-                android:textSize="9sp"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_inner"/>
-        </LinearLayout>
-        
-        <!-- Row 22: VISIT - INNER THIN BORDER -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="25dp"
-            android:orientation="horizontal">
-            
-            <View
-                android:layout_width="337dp"
-                android:layout_height="match_parent"/>
-            
-            <TextView
-                android:layout_width="92dp"
-                android:layout_height="match_parent"
-                android:text="VISIT"
-                android:textSize="9sp"
-                android:textStyle="bold"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_inner"/>
-            
-            <TextView
-                android:id="@+id/cellG22"
-                android:layout_width="95dp"
-                android:layout_height="match_parent"
-                android:text=""
-                android:textSize="9sp"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_inner"/>
-            
-            <TextView
-                android:id="@+id/cellH22"
-                android:layout_width="89dp"
-                android:layout_height="match_parent"
-                android:text=""
-                android:textSize="9sp"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_inner"/>
-        </LinearLayout>
-        
-        <!-- Row 23: OTHER - INNER THIN BORDER -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="26dp"
-            android:orientation="horizontal">
-            
-            <View
-                android:layout_width="337dp"
-                android:layout_height="match_parent"/>
-            
-            <TextView
-                android:layout_width="92dp"
-                android:layout_height="match_parent"
-                android:text="OTHER"
-                android:textSize="9sp"
-                android:textStyle="bold"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_inner"/>
-            
-            <TextView
-                android:id="@+id/cellG23"
-                android:layout_width="95dp"
-                android:layout_height="match_parent"
-                android:text=""
-                android:textSize="9sp"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_inner"/>
-            
-            <TextView
-                android:id="@+id/cellH23"
-                android:layout_width="89dp"
-                android:layout_height="match_parent"
-                android:text=""
-                android:textSize="9sp"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_inner"/>
-        </LinearLayout>
-        
-        <!-- Row 24: TOTAL AMOUNT (F24+G24 Merged) - THICK BORDER -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="15dp"
-            android:orientation="horizontal">
-            
-            <View
-                android:layout_width="337dp"
-                android:layout_height="match_parent"/>
-            
-            <!-- F24+G24 Merged: TOTAL AMOUNT (THICK BORDER) -->
-            <TextView
-                android:layout_width="187dp"
-                android:layout_height="match_parent"
-                android:text="TOTAL AMOUNT"
-                android:textSize="9sp"
-                android:textStyle="bold"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_total"/>
-            
-            <TextView
-                android:id="@+id/cellH24"
-                android:layout_width="89dp"
-                android:layout_height="match_parent"
-                android:text=""
-                android:textSize="9sp"
-                android:textStyle="bold"
-                android:textColor="#000000"
-                android:gravity="center"
-                android:background="@drawable/excel_summary_total"/>
+            <!-- Row 24: TOTAL AMOUNT - THICK BORDER (2dp) -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="22dp"
+                android:orientation="horizontal">
+                
+                <!-- F24+G24 Merged: TOTAL AMOUNT -->
+                <TextView
+                    android:layout_width="195dp"
+                    android:layout_height="match_parent"
+                    android:text="TOTAL AMOUNT"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:gravity="center"
+                    android:background="@drawable/excel_summary_total"/>
+                
+                <TextView
+                    android:id="@+id/cellH24"
+                    android:layout_width="81dp"
+                    android:layout_height="match_parent"
+                    android:text=""
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:gravity="center"
+                    android:background="@drawable/excel_summary_total"/>
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 
