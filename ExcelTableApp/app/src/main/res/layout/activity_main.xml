@@ -228,7 +228,7 @@
 
                         <!-- D2: STATUS - Width 30dp (5.86 ratio) -->
                         <TextView
-                            android:layout_width="30dp"
+                            android:layout_width="40dp"
                             android:layout_height="match_parent"
                             android:background="@drawable/excel_header_cell"
                             android:gravity="center"
@@ -240,11 +240,11 @@
 
                         <!-- E2: REASON FOR CNV - Width 45dp (8.43 ratio) -->
                         <TextView
-                            android:layout_width="45dp"
+                            android:layout_width="50dp"
                             android:layout_height="match_parent"
                             android:background="@drawable/excel_header_cell"
                             android:gravity="center"
-                            android:text="REASON"
+                            android:text="REASON FOR CNV"
                             android:textSize="7sp"
                             android:textStyle="bold"
                             android:textColor="#000000"
