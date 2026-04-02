@@ -74,6 +74,18 @@ public class MainActivity extends Activity {
     // Selection info display
     private TextView tvSelectionInfo;
     
+    // Drag Handle View for selection expansion
+    private View dragHandleView;
+    private boolean isDraggingHandle = false;
+    
+    // Row header dragging for multi-row selection
+    private boolean isRowHeaderDragging = false;
+    private int rowDragStartRow = -1;
+    
+    // Column header dragging for multi-column selection
+    private boolean isColumnHeaderDragging = false;
+    private int columnDragStartCol = -1;
+    
     // Data rows storage
     private ArrayList<LinearLayout> allDataRows;
     private int selectedRowIndex = -1;
@@ -176,24 +188,110 @@ public class MainActivity extends Activity {
         
         // Setup column header click listeners for column selection
         setupColumnHeaderSelection();
+        
+        // Setup summary table cell selection
+        setupSummaryTableSelection();
+    }
+    
+    /**
+     * Setup touch listeners for summary table cells to support selection
+     */
+    private void setupSummaryTableSelection() {
+        // Summary table cells with their logical positions (row offset from main data)
+        // Row 15 = TOTAL KM, Row 16 = LUNCH, Row 17 = VISIT, Row 18 = OTHER, Row 19 = TOTAL AMOUNT
+        
+        View[][] summaryCells = {
+            {cellTotalKmCount, cellTotalKmAmount},   // Row 15 (index 0)
+            {cellLunchCount, cellLunchAmount},       // Row 16 (index 1)
+            {cellVisitCount, cellVisitAmount},       // Row 17 (index 2)
+            {cellOtherCount, cellOtherAmount},       // Row 18 (index 3)
+            {null, cellFinalTotal}                    // Row 19 (index 4) - merged cell
+        };
+        
+        for (int rowIdx = 0; rowIdx < summaryCells.length; rowIdx++) {
+            final int summaryRow = rowIdx;
+            
+            for (int colIdx = 0; colIdx < summaryCells[rowIdx].length; colIdx++) {
+                final View cell = summaryCells[rowIdx][colIdx];
+                final int summaryCol = colIdx + 6; // Summary table starts at column G (index 6)
+                
+                if (cell != null) {
+                    cell.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            // Select summary cell
+                            selectionManager.selectSummaryCell(summaryRow, summaryCol);
+                            showToast("Summary cell selected", true);
+                        }
+                    });
+                    
+                    cell.setClickable(true);
+                    cell.setFocusable(true);
+                }
+            }
+        }
     }
     
     private void setupColumnHeaderSelection() {
         // Find the row2Headers (column header row)
-        LinearLayout row2Headers = (LinearLayout) findViewById(R.id.row2Headers);
+        final LinearLayout row2Headers = (LinearLayout) findViewById(R.id.row2Headers);
         if (row2Headers == null) return;
         
-        // Add click listeners to each column header
+        // Add touch listeners to each column header for drag-based multi-column selection
         for (int i = 0; i < row2Headers.getChildCount(); i++) {
             final int colIndex = i;
             View header = row2Headers.getChildAt(i);
             
-            header.setOnClickListener(new View.OnClickListener() {
+            header.setOnTouchListener(new View.OnTouchListener() {
+                private float startX;
+                
                 @Override
-                public void onClick(View v) {
-                    // Select entire column
-                    selectionManager.selectColumn(colIndex);
-                    showToast("Column " + (char)('A' + colIndex) + " selected", true);
+                public boolean onTouch(View v, MotionEvent event) {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_DOWN:
+                            startX = event.getRawX();
+                            columnDragStartCol = colIndex;
+                            isColumnHeaderDragging = false;
+                            selectionManager.startColumnDrag(colIndex);
+                            return true;
+                            
+                        case MotionEvent.ACTION_MOVE:
+                            float dx = Math.abs(event.getRawX() - startX);
+                            if (dx > dpToPx(10)) {
+                                isColumnHeaderDragging = true;
+                            }
+                            
+                            if (isColumnHeaderDragging) {
+                                // Find which column we're over
+                                int newCol = getColumnFromX(row2Headers, event.getRawX());
+                                if (newCol >= 0) {
+                                    selectionManager.updateColumnDrag(newCol);
+                                }
+                            }
+                            return true;
+                            
+                        case MotionEvent.ACTION_UP:
+                            if (!isColumnHeaderDragging) {
+                                // Single tap - select entire column
+                                selectionManager.selectColumn(colIndex);
+                                int rowCount = selectionManager.getSelectedRowCount();
+                                showToast("Column " + (char)('A' + colIndex) + " selected (" + rowCount + " cells)", true);
+                            } else {
+                                // End drag
+                                selectionManager.endDragSelection();
+                                int colCount = selectionManager.getSelectedColumnCount();
+                                if (colCount > 1) {
+                                    showToast(colCount + " columns selected", true);
+                                }
+                            }
+                            isColumnHeaderDragging = false;
+                            return true;
+                            
+                        case MotionEvent.ACTION_CANCEL:
+                            isColumnHeaderDragging = false;
+                            return true;
+                    }
+                    return false;
                 }
             });
             
@@ -201,6 +299,25 @@ public class MainActivity extends Activity {
             header.setClickable(true);
             header.setFocusable(true);
         }
+    }
+    
+    /**
+     * Get column index from X coordinate in header row
+     */
+    private int getColumnFromX(LinearLayout headerRow, float rawX) {
+        int[] rowLocation = new int[2];
+        headerRow.getLocationOnScreen(rowLocation);
+        float localX = rawX - rowLocation[0];
+        
+        float accumulatedWidth = 0;
+        for (int i = 0; i < headerRow.getChildCount(); i++) {
+            View child = headerRow.getChildAt(i);
+            accumulatedWidth += child.getWidth();
+            if (localX < accumulatedWidth) {
+                return i;
+            }
+        }
+        return headerRow.getChildCount() - 1;
     }
     
     // ==================== EXCEL-STYLE SELECTION SYSTEM ====================
@@ -221,12 +338,120 @@ public class MainActivity extends Activity {
                 clearSelectionVisuals();
                 updateSelectionInfoDisplay();
                 borderManager.clearSelection();
+                hideDragHandle();
+            }
+            
+            @Override
+            public void onDragHandleVisible(int row, int col) {
+                showDragHandle(row, col);
             }
         });
     }
     
+    // ==================== DRAG HANDLE METHODS ====================
+    
+    private void showDragHandle(int row, int col) {
+        if (row < 0 || row >= allDataRows.size() || col < 0) {
+            hideDragHandle();
+            return;
+        }
+        
+        LinearLayout rowLayout = allDataRows.get(row);
+        if (col >= rowLayout.getChildCount()) {
+            hideDragHandle();
+            return;
+        }
+        
+        View cell = rowLayout.getChildAt(col);
+        if (cell == null) {
+            hideDragHandle();
+            return;
+        }
+        
+        // Create drag handle if not exists
+        if (dragHandleView == null) {
+            dragHandleView = new View(this);
+            dragHandleView.setBackgroundResource(R.drawable.excel_drag_handle);
+            
+            // Set touch listener for drag handle
+            dragHandleView.setOnTouchListener(new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_DOWN:
+                            isDraggingHandle = true;
+                            selectionManager.startDragHandle();
+                            return true;
+                            
+                        case MotionEvent.ACTION_MOVE:
+                            if (isDraggingHandle) {
+                                int[] pos = getCellPositionFromGlobalTouch(event.getRawX(), event.getRawY());
+                                if (pos != null) {
+                                    selectionManager.updateDragHandle(pos[0], pos[1]);
+                                }
+                            }
+                            return true;
+                            
+                        case MotionEvent.ACTION_UP:
+                        case MotionEvent.ACTION_CANCEL:
+                            if (isDraggingHandle) {
+                                selectionManager.endDragHandle();
+                                isDraggingHandle = false;
+                                int count = selectionManager.getSelectedCellCount();
+                                if (count > 1) {
+                                    showToast(count + " cells selected", true);
+                                }
+                            }
+                            return true;
+                    }
+                    return false;
+                }
+            });
+        }
+        
+        // Position drag handle at bottom-right of selection
+        // Remove from current parent if any
+        if (dragHandleView.getParent() != null) {
+            ((android.view.ViewGroup) dragHandleView.getParent()).removeView(dragHandleView);
+        }
+        
+        // Add to the cell's parent (the row) at the correct position
+        int handleSize = dpToPx(10);
+        android.widget.FrameLayout.LayoutParams params = new android.widget.FrameLayout.LayoutParams(
+            handleSize, handleSize
+        );
+        
+        // Get cell position in screen
+        int[] cellLocation = new int[2];
+        cell.getLocationOnScreen(cellLocation);
+        
+        // Add handle to root view
+        android.view.ViewGroup rootView = (android.view.ViewGroup) getWindow().getDecorView();
+        android.widget.FrameLayout.LayoutParams rootParams = new android.widget.FrameLayout.LayoutParams(
+            handleSize, handleSize
+        );
+        rootParams.leftMargin = cellLocation[0] + cell.getWidth() - handleSize / 2;
+        rootParams.topMargin = cellLocation[1] + cell.getHeight() - handleSize / 2;
+        
+        rootView.addView(dragHandleView, rootParams);
+        dragHandleView.setVisibility(View.VISIBLE);
+        dragHandleView.bringToFront();
+    }
+    
+    private void hideDragHandle() {
+        if (dragHandleView != null && dragHandleView.getParent() != null) {
+            ((android.view.ViewGroup) dragHandleView.getParent()).removeView(dragHandleView);
+        }
+    }
+    
     private void updateSelectionVisuals() {
-        // Reset all cells to default background first
+        // Get selection bounds
+        int selStartRow = selectionManager.getStartRow();
+        int selEndRow = selectionManager.getEndRow();
+        int selStartCol = selectionManager.getStartCol();
+        int selEndCol = selectionManager.getEndCol();
+        
+        // Reset all cells and apply selection visuals
         for (int rowIndex = 0; rowIndex < allDataRows.size(); rowIndex++) {
             LinearLayout row = allDataRows.get(rowIndex);
             boolean isLastRow = (rowIndex == TOTAL_DATA_ROWS - 1);
@@ -239,11 +464,61 @@ public class MainActivity extends Activity {
                         if (selectionManager.isActiveCell(rowIndex, colIndex)) {
                             cell.setBackgroundResource(R.drawable.excel_cell_active);
                         } else {
-                            cell.setBackgroundResource(R.drawable.excel_cell_multi_selected);
+                            // Check if cell is on the outer edge of selection for thick border
+                            boolean isTopEdge = (rowIndex == selStartRow);
+                            boolean isBottomEdge = (rowIndex == selEndRow);
+                            boolean isLeftEdge = (colIndex == selStartCol);
+                            boolean isRightEdge = (colIndex == selEndCol);
+                            
+                            // Use outer border drawable for edge cells
+                            if (isTopEdge || isBottomEdge || isLeftEdge || isRightEdge) {
+                                cell.setBackgroundResource(R.drawable.excel_selection_outer_border);
+                            } else {
+                                cell.setBackgroundResource(R.drawable.excel_cell_multi_selected);
+                            }
                         }
                     } else {
                         // Apply default or saved border
                         applyCellBorderDrawable(rowIndex, colIndex, cell);
+                    }
+                }
+            }
+        }
+        
+        // Update summary table selection visuals
+        updateSummarySelectionVisuals();
+    }
+    
+    /**
+     * Update selection visuals for summary table cells
+     */
+    private void updateSummarySelectionVisuals() {
+        // Summary cells array
+        View[][] summaryCells = {
+            {cellTotalKmCount, cellTotalKmAmount},
+            {cellLunchCount, cellLunchAmount},
+            {cellVisitCount, cellVisitAmount},
+            {cellOtherCount, cellOtherAmount},
+            {null, cellFinalTotal}
+        };
+        
+        for (int rowIdx = 0; rowIdx < summaryCells.length; rowIdx++) {
+            int actualRow = CellSelectionManager.SUMMARY_START_ROW + rowIdx;
+            
+            for (int colIdx = 0; colIdx < summaryCells[rowIdx].length; colIdx++) {
+                View cell = summaryCells[rowIdx][colIdx];
+                int actualCol = colIdx + 6; // Summary starts at column G
+                
+                if (cell != null) {
+                    if (selectionManager.isCellSelected(actualRow, actualCol)) {
+                        if (selectionManager.isActiveCell(actualRow, actualCol)) {
+                            cell.setBackgroundResource(R.drawable.excel_cell_active);
+                        } else {
+                            cell.setBackgroundResource(R.drawable.excel_cell_multi_selected);
+                        }
+                    } else {
+                        // Reset to default summary cell background
+                        cell.setBackgroundResource(R.drawable.excel_summary_inner);
                     }
                 }
             }
@@ -268,7 +543,28 @@ public class MainActivity extends Activity {
             if (selectionManager.hasSelection()) {
                 String selStr = selectionManager.getSelectionString();
                 int count = selectionManager.getSelectedCellCount();
-                tvSelectionInfo.setText(selStr + " (" + count + " cells)");
+                int mode = selectionManager.getSelectionMode();
+                
+                String modeStr = "";
+                switch (mode) {
+                    case CellSelectionManager.MODE_SINGLE_CELL:
+                        modeStr = "Cell";
+                        break;
+                    case CellSelectionManager.MODE_ROW:
+                        int rowCount = selectionManager.getSelectedRowCount();
+                        modeStr = rowCount + " Row" + (rowCount > 1 ? "s" : "");
+                        break;
+                    case CellSelectionManager.MODE_COLUMN:
+                        int colCount = selectionManager.getSelectedColumnCount();
+                        modeStr = colCount + " Col" + (colCount > 1 ? "s" : "");
+                        break;
+                    case CellSelectionManager.MODE_MULTI_CELL:
+                    case CellSelectionManager.MODE_DRAG_HANDLE:
+                        modeStr = count + " cells";
+                        break;
+                }
+                
+                tvSelectionInfo.setText(selStr + " | " + modeStr);
                 tvSelectionInfo.setVisibility(View.VISIBLE);
             } else {
                 tvSelectionInfo.setVisibility(View.GONE);
@@ -470,6 +766,7 @@ public class MainActivity extends Activity {
         row.setOnTouchListener(new View.OnTouchListener() {
             private float startX, startY;
             private boolean isLongPressed = false;
+            private boolean isTappedOnRowHeader = false;
             
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -478,6 +775,7 @@ public class MainActivity extends Activity {
                         startX = event.getRawX();
                         startY = event.getRawY();
                         isLongPressed = false;
+                        isRowHeaderDragging = false;
                         
                         // Get cell position from touch
                         int[] pos = getCellPositionFromTouch(row, event.getX());
@@ -485,36 +783,62 @@ public class MainActivity extends Activity {
                             touchStartRow = pos[0];
                             touchStartCol = pos[1];
                             
-                            // Start long press detection for drag selection
-                            final int startRow = touchStartRow;
-                            final int startCol = touchStartCol;
+                            // Check if tapped on row header (column A - SR NO)
+                            isTappedOnRowHeader = (pos[1] == 0);
                             
-                            longPressRunnable = new Runnable() {
-                                @Override
-                                public void run() {
-                                    isLongPressed = true;
-                                    isDraggingSelection = true;
-                                    selectionManager.startDragSelection(startRow, startCol);
-                                    
-                                    // Vibrate for feedback (optional)
-                                    // vibrator.vibrate(50);
-                                }
-                            };
-                            longPressHandler.postDelayed(longPressRunnable, LONG_PRESS_DELAY);
+                            if (isTappedOnRowHeader) {
+                                // Start row selection for potential multi-row drag
+                                rowDragStartRow = rowIndex;
+                                selectionManager.startRowDrag(rowIndex);
+                            } else {
+                                // Start long press detection for drag selection on other cells
+                                final int startRow = touchStartRow;
+                                final int startCol = touchStartCol;
+                                
+                                longPressRunnable = new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        isLongPressed = true;
+                                        isDraggingSelection = true;
+                                        selectionManager.startDragSelection(startRow, startCol);
+                                    }
+                                };
+                                longPressHandler.postDelayed(longPressRunnable, LONG_PRESS_DELAY);
+                            }
                         }
                         return true;
                         
                     case MotionEvent.ACTION_MOVE:
-                        // Check if moved significantly (to cancel long press if just scrolling)
                         float dx = Math.abs(event.getRawX() - startX);
                         float dy = Math.abs(event.getRawY() - startY);
                         
-                        if (!isLongPressed && (dx > dpToPx(10) || dy > dpToPx(10))) {
-                            // Cancel long press - user is scrolling
-                            longPressHandler.removeCallbacks(longPressRunnable);
+                        // Row header drag for multi-row selection
+                        if (isTappedOnRowHeader) {
+                            if (dy > dpToPx(10)) {
+                                isRowHeaderDragging = true;
+                            }
+                            
+                            if (isRowHeaderDragging) {
+                                // Find which row we're over
+                                int[] currentPos = getCellPositionFromGlobalTouch(event.getRawX(), event.getRawY());
+                                if (currentPos != null) {
+                                    selectionManager.updateRowDrag(currentPos[0]);
+                                }
+                            }
+                            return true;
                         }
                         
-                        // If dragging selection, update it
+                        // Normal cell drag selection
+                        if (!isLongPressed && (dx > dpToPx(10) || dy > dpToPx(10))) {
+                            longPressHandler.removeCallbacks(longPressRunnable);
+                            
+                            // Start immediate drag selection if moved significantly
+                            if (!isDraggingSelection) {
+                                isDraggingSelection = true;
+                                selectionManager.startDragSelection(touchStartRow, touchStartCol);
+                            }
+                        }
+                        
                         if (isDraggingSelection) {
                             int[] currentPos = getCellPositionFromGlobalTouch(event.getRawX(), event.getRawY());
                             if (currentPos != null) {
@@ -527,33 +851,45 @@ public class MainActivity extends Activity {
                     case MotionEvent.ACTION_UP:
                         longPressHandler.removeCallbacks(longPressRunnable);
                         
+                        // Handle row header tap/drag
+                        if (isTappedOnRowHeader) {
+                            if (!isRowHeaderDragging) {
+                                // Single tap on row header - select entire row
+                                selectionManager.selectRow(rowIndex);
+                                showToast("Row " + (rowIndex + 1) + " selected (" + TOTAL_COLUMNS + " cells)", true);
+                            } else {
+                                // End row drag
+                                selectionManager.endDragSelection();
+                                int rowCount = selectionManager.getSelectedRowCount();
+                                if (rowCount > 1) {
+                                    showToast(rowCount + " rows selected", true);
+                                }
+                            }
+                            isRowHeaderDragging = false;
+                            isTappedOnRowHeader = false;
+                            return true;
+                        }
+                        
+                        // Handle normal drag selection
                         if (isDraggingSelection) {
-                            // End drag selection
                             selectionManager.endDragSelection();
                             isDraggingSelection = false;
                             
-                            // Show selection count
                             int count = selectionManager.getSelectedCellCount();
                             if (count > 1) {
                                 showToast(count + " cells selected", true);
                             }
                         } else {
-                            // This was a tap - handle based on column
+                            // This was a tap on a cell
                             int[] tapPos = getCellPositionFromTouch(row, event.getX());
                             if (tapPos != null) {
-                                if (tapPos[1] == 0) {
-                                    // Tapped on column A (SR NO) - select entire row
-                                    selectionManager.selectRow(tapPos[0]);
-                                    showToast("Row " + (tapPos[0] + 1) + " selected", true);
-                                } else {
-                                    // Tapped on a cell - single cell selection
-                                    selectionManager.selectSingleCell(tapPos[0], tapPos[1]);
-                                    
-                                    // Focus the cell for editing
-                                    View cell = row.getChildAt(tapPos[1]);
-                                    if (cell instanceof EditText) {
-                                        cell.requestFocus();
-                                    }
+                                // Single cell selection
+                                selectionManager.selectSingleCell(tapPos[0], tapPos[1]);
+                                
+                                // Focus the cell for editing
+                                View cell = row.getChildAt(tapPos[1]);
+                                if (cell instanceof EditText) {
+                                    cell.requestFocus();
                                 }
                             }
                         }
@@ -562,19 +898,20 @@ public class MainActivity extends Activity {
                     case MotionEvent.ACTION_CANCEL:
                         longPressHandler.removeCallbacks(longPressRunnable);
                         isDraggingSelection = false;
+                        isRowHeaderDragging = false;
+                        isTappedOnRowHeader = false;
                         break;
                 }
                 return false;
             }
         });
         
-        // Long press for row options dialog (double tap or menu button)
+        // Long press for row options dialog
         row.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                // Long press handled by touch listener for drag selection
                 // Show options dialog only if not dragging
-                if (!isDraggingSelection) {
+                if (!isDraggingSelection && !isRowHeaderDragging) {
                     showRowOptionsDialog(rowIndex);
                 }
                 return true;
