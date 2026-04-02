@@ -27,13 +27,11 @@ import java.util.ArrayList;
 public class MainActivity extends Activity {
     
     // Excel Column Widths (in dp) - matching Excel proportions
-    // A=34dp, B=62dp, C=169dp, D=30dp, E=45dp, F=92dp, G=95dp, H=89dp, I=38dp
-    private static final int[] COLUMN_WIDTHS = {34, 62, 169, 30, 45, 92, 95, 89, 38};
-    private static final int DATA_ROW_HEIGHT = 22;       // Row 3-12 height (main data)
-    private static final int ADDITIONAL_ROW_HEIGHT = 18; // Row 13-15 height
+    // A=34dp, B=62dp, C=200dp (40.0), D=30dp, E=45dp, F=92dp, G=95dp, H=89dp, I=38dp
+    private static final int[] COLUMN_WIDTHS = {34, 62, 200, 30, 45, 92, 95, 89, 38};
+    private static final int DATA_ROW_HEIGHT = 21;       // All 15 rows height (20.25 ~ 21dp)
     private static final int TOTAL_COLUMNS = 9;
-    private static final int MAIN_DATA_ROWS = 10;        // Row 3-12
-    private static final int ADDITIONAL_DATA_ROWS = 3;   // Row 13-15
+    private static final int TOTAL_DATA_ROWS = 15;       // Row 3-17 (15 data rows total)
     
     // Views
     private LinearLayout dataRowsContainer;
@@ -133,16 +131,9 @@ public class MainActivity extends Activity {
         dataRowsContainer.removeAllViews();
         allDataRows.clear();
         
-        // Create main data rows (Row 3-12 = 10 rows, 22dp height)
-        for (int rowIndex = 0; rowIndex < MAIN_DATA_ROWS; rowIndex++) {
+        // Create all 15 data rows (Row 3-17) with same height (21dp ~ 20.25)
+        for (int rowIndex = 0; rowIndex < TOTAL_DATA_ROWS; rowIndex++) {
             LinearLayout row = createExcelRow(rowIndex + 1, DATA_ROW_HEIGHT);
-            allDataRows.add(row);
-            dataRowsContainer.addView(row);
-        }
-        
-        // Create additional rows (Row 13-15 = 3 rows, 18dp height)
-        for (int rowIndex = 0; rowIndex < ADDITIONAL_DATA_ROWS; rowIndex++) {
-            LinearLayout row = createExcelRow(MAIN_DATA_ROWS + rowIndex + 1, ADDITIONAL_ROW_HEIGHT);
             allDataRows.add(row);
             dataRowsContainer.addView(row);
         }
@@ -175,7 +166,7 @@ public class MainActivity extends Activity {
         // Column B: BANK NAME (left align)
         row.addView(createEditCell("", COLUMN_WIDTHS[1], "cellB", Gravity.START | Gravity.CENTER_VERTICAL, 14));
         
-        // Column C: APPLICANT NAME (left align)
+        // Column C: APPLICANT NAME (left align, auto-adjust based on content)
         row.addView(createEditCell("", COLUMN_WIDTHS[2], "cellC", Gravity.START | Gravity.CENTER_VERTICAL, 14));
         
         // Column D: STATUS (center)
