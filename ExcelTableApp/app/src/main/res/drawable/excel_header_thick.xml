@@ -6,7 +6,7 @@
             <solid android:color="#FFFFFF"/>
         </shape>
     </item>
-    <!-- Thick Outer Border for Summary Table (2.5dp) -->
+    <!-- Thick Border for Header cells (2.5dp) -->
     <item>
         <shape android:shape="rectangle">
             <stroke 

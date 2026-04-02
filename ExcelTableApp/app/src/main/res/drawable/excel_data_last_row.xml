@@ -6,8 +6,17 @@
             <solid android:color="#FFFFFF"/>
         </shape>
     </item>
-    <!-- Thick Outer Border for Summary Table (2.5dp) -->
-    <item>
+    <!-- Thin Border for sides and top (0.5dp) -->
+    <item android:left="0.5dp" android:right="0.5dp" android:top="0.5dp">
+        <shape android:shape="rectangle">
+            <stroke 
+                android:width="0.5dp" 
+                android:color="#000000"/>
+            <solid android:color="@android:color/transparent"/>
+        </shape>
+    </item>
+    <!-- Thick Bottom Border (2.5dp) -->
+    <item android:top="-2.5dp" android:left="-2.5dp" android:right="-2.5dp">
         <shape android:shape="rectangle">
             <stroke 
                 android:width="2.5dp" 
