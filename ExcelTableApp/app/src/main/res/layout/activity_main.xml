@@ -581,6 +581,20 @@
             android:layout_weight="1" />
 
         <TextView
+            android:id="@+id/tvSelectionInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:textColor="#1A237E"
+            android:background="#E8EAF6"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:visibility="gone"
+            android:layout_marginEnd="8dp" />
+            
+        <TextView
             android:id="@+id/tvEntryCount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
