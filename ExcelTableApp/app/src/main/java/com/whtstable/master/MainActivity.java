@@ -21,6 +21,8 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
 
 import java.util.ArrayList;
 
@@ -44,8 +46,18 @@ public class MainActivity extends Activity {
     private TextView cellOtherCount, cellOtherAmount;
     private TextView cellFinalTotal;
     
-    private Button btnToggleFloating, btnSelectMonth, btnSelectYear, btnHistory;
+    private Button btnToggleFloating, btnSelectMonth, btnSelectYear, btnHistory, btnBorders;
     private TextView tvCurrentDate, tvEntryCount;
+    
+    // Border Panel Views
+    private View borderPanelContainer;
+    private boolean isBorderPanelVisible = false;
+    private BorderManager borderManager;
+    
+    // Cell Selection for borders
+    private int selectedCellRow = -1;
+    private int selectedCellCol = -1;
+    private View selectedCellView = null;
     
     // Data rows storage
     private ArrayList<LinearLayout> allDataRows;
@@ -77,9 +89,15 @@ public class MainActivity extends Activity {
         // Initialize Database
         dbHelper = DatabaseHelper.getInstance(this);
         
+        // Initialize Border Manager
+        borderManager = BorderManager.getInstance(this);
+        
         // Load saved month/year
         currentMonth = dbHelper.getSelectedMonth();
         currentYear = dbHelper.getSelectedYear();
+        
+        // Set border manager context
+        borderManager.setCurrentMonthYear(currentMonth, currentYear);
         
         // Initialize views
         initializeViews();
@@ -93,8 +111,14 @@ public class MainActivity extends Activity {
         // Set up button listeners
         setupButtonListeners();
         
+        // Initialize Border Panel
+        initializeBorderPanel();
+        
         // Update UI
         updateMonthYearButtons();
+        
+        // Apply saved borders to cells
+        applyBordersToAllCells();
     }
     
     private void initializeViews() {
@@ -121,8 +145,12 @@ public class MainActivity extends Activity {
         btnSelectMonth = (Button) findViewById(R.id.btnSelectMonth);
         btnSelectYear = (Button) findViewById(R.id.btnSelectYear);
         btnHistory = (Button) findViewById(R.id.btnHistory);
+        btnBorders = (Button) findViewById(R.id.btnBorders);
         tvCurrentDate = (TextView) findViewById(R.id.tvCurrentDate);
         tvEntryCount = (TextView) findViewById(R.id.tvEntryCount);
+        
+        // Border Panel Container
+        borderPanelContainer = findViewById(R.id.borderPanelContainer);
         
         allDataRows = new ArrayList<LinearLayout>();
     }
@@ -216,8 +244,8 @@ public class MainActivity extends Activity {
         return row;
     }
     
-    private EditText createEditCell(String text, int widthDp, String tag, int gravity, int textSizeSp, int borderDrawable) {
-        EditText et = new EditText(this);
+    private EditText createEditCell(String text, int widthDp, final String tag, int gravity, int textSizeSp, int borderDrawable) {
+        final EditText et = new EditText(this);
         et.setText(text);
         et.setTextSize(textSizeSp);
         et.setTextColor(Color.BLACK);
@@ -233,7 +261,30 @@ public class MainActivity extends Activity {
         );
         et.setLayoutParams(params);
         
+        // Add focus change listener for cell selection (for borders)
+        et.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                if (hasFocus && isBorderPanelVisible) {
+                    // Find row index and column index
+                    LinearLayout parent = (LinearLayout) v.getParent();
+                    int rowIndex = allDataRows.indexOf(parent);
+                    int colIndex = getColumnIndex(tag);
+                    
+                    if (rowIndex >= 0 && colIndex >= 0) {
+                        selectCellForBorder(rowIndex, colIndex, v);
+                    }
+                }
+            }
+        });
+        
         return et;
+    }
+    
+    private int getColumnIndex(String tag) {
+        if (tag == null || tag.length() < 5) return -1;
+        char colChar = tag.charAt(4); // "cellA" -> 'A'
+        return colChar - 'A';
     }
     
     private int dpToPx(int dp) {
@@ -289,6 +340,13 @@ public class MainActivity extends Activity {
                 openHistoryPage();
             }
         });
+        
+        btnBorders.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggleBorderPanel();
+            }
+        });
     }
     
     private void showMonthPicker() {
@@ -299,8 +357,10 @@ public class MainActivity extends Activity {
             public void onClick(DialogInterface dialog, int which) {
                 currentMonth = months[which];
                 dbHelper.setSelectedMonth(currentMonth);
+                borderManager.setCurrentMonthYear(currentMonth, currentYear);
                 updateMonthYearButtons();
                 loadTableFromDatabase();
+                applyBordersToAllCells();
             }
         });
         builder.show();
@@ -315,8 +375,10 @@ public class MainActivity extends Activity {
             public void onClick(DialogInterface dialog, int which) {
                 currentYear = years[which];
                 dbHelper.setSelectedYear(currentYear);
+                borderManager.setCurrentMonthYear(currentMonth, currentYear);
                 updateMonthYearButtons();
                 loadTableFromDatabase();
+                applyBordersToAllCells();
             }
         });
         builder.show();
@@ -680,5 +742,160 @@ public class MainActivity extends Activity {
     
     private void showToast(String message, boolean isSuccess) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+    
+    // ==================== BORDER PANEL METHODS ====================
+    
+    private void initializeBorderPanel() {
+        if (borderPanelContainer == null) return;
+        
+        // Close button
+        View btnClose = borderPanelContainer.findViewById(R.id.btnCloseBorderPanel);
+        if (btnClose != null) {
+            btnClose.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hideBorderPanel();
+                }
+            });
+        }
+        
+        // Border option buttons
+        setupBorderOptionButton(R.id.btnBorderAll, BorderManager.BORDER_TYPE_ALL);
+        setupBorderOptionButton(R.id.btnBorderInner, BorderManager.BORDER_TYPE_INNER);
+        setupBorderOptionButton(R.id.btnBorderOuter, BorderManager.BORDER_TYPE_OUTER);
+        setupBorderOptionButton(R.id.btnBorderNone, BorderManager.BORDER_TYPE_NONE);
+        setupBorderOptionButton(R.id.btnBorderTop, BorderManager.BORDER_TYPE_TOP);
+        setupBorderOptionButton(R.id.btnBorderBottom, BorderManager.BORDER_TYPE_BOTTOM);
+        setupBorderOptionButton(R.id.btnBorderLeft, BorderManager.BORDER_TYPE_LEFT);
+        setupBorderOptionButton(R.id.btnBorderRight, BorderManager.BORDER_TYPE_RIGHT);
+        setupBorderOptionButton(R.id.btnBorderHorizontalInner, BorderManager.BORDER_TYPE_HORIZONTAL_INNER);
+        setupBorderOptionButton(R.id.btnBorderVerticalInner, BorderManager.BORDER_TYPE_VERTICAL_INNER);
+        setupBorderOptionButton(R.id.btnBorderTopBottom, BorderManager.BORDER_TYPE_TOP_AND_BOTTOM);
+        setupBorderOptionButton(R.id.btnBorderThickBottom, BorderManager.BORDER_TYPE_THICK_BOTTOM);
+        setupBorderOptionButton(R.id.btnBorderDoubleBottom, BorderManager.BORDER_TYPE_DOUBLE_BOTTOM);
+        setupBorderOptionButton(R.id.btnBorderTopThickBottom, BorderManager.BORDER_TYPE_TOP_AND_THICK_BOTTOM);
+    }
+    
+    private void setupBorderOptionButton(int buttonId, final int borderType) {
+        View btn = borderPanelContainer.findViewById(buttonId);
+        if (btn != null) {
+            btn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    applyBorderToSelection(borderType);
+                }
+            });
+        }
+    }
+    
+    private void toggleBorderPanel() {
+        if (isBorderPanelVisible) {
+            hideBorderPanel();
+        } else {
+            showBorderPanel();
+        }
+    }
+    
+    private void showBorderPanel() {
+        if (borderPanelContainer != null) {
+            borderPanelContainer.setVisibility(View.VISIBLE);
+            isBorderPanelVisible = true;
+            btnBorders.setBackgroundResource(R.drawable.btn_danger_bg);
+            
+            // If a row is selected, select its first cell
+            if (selectedRowIndex >= 0 && selectedRowIndex < allDataRows.size()) {
+                selectCellForBorder(selectedRowIndex, 0, allDataRows.get(selectedRowIndex).getChildAt(0));
+            }
+            
+            showToast("Tap cell to select, then choose border", true);
+        }
+    }
+    
+    private void hideBorderPanel() {
+        if (borderPanelContainer != null) {
+            borderPanelContainer.setVisibility(View.GONE);
+            isBorderPanelVisible = false;
+            btnBorders.setBackgroundResource(R.drawable.btn_primary_bg);
+            clearCellSelection();
+        }
+    }
+    
+    private void selectCellForBorder(int row, int col, View cellView) {
+        // Clear previous selection highlight
+        if (selectedCellView != null) {
+            applyCellBorderDrawable(selectedCellRow, selectedCellCol, selectedCellView);
+        }
+        
+        // Set new selection
+        selectedCellRow = row;
+        selectedCellCol = col;
+        selectedCellView = cellView;
+        
+        // Update border manager selection
+        borderManager.setSingleSelection(row, col);
+        
+        // Highlight selected cell
+        if (cellView != null) {
+            cellView.setBackgroundResource(R.drawable.excel_cell_selected);
+        }
+    }
+    
+    private void clearCellSelection() {
+        if (selectedCellView != null) {
+            applyCellBorderDrawable(selectedCellRow, selectedCellCol, selectedCellView);
+        }
+        selectedCellRow = -1;
+        selectedCellCol = -1;
+        selectedCellView = null;
+        borderManager.clearSelection();
+    }
+    
+    private void applyBorderToSelection(int borderType) {
+        if (!borderManager.hasSelection()) {
+            showToast("Please select a cell first", false);
+            return;
+        }
+        
+        // Default border style is THIN
+        int borderStyle = CellBorder.STYLE_THIN;
+        
+        // Apply border type to selection
+        borderManager.applyBorderType(borderType, borderStyle);
+        
+        // Refresh cell borders visually
+        applyBordersToAllCells();
+        
+        // Show feedback
+        String message = borderType == BorderManager.BORDER_TYPE_NONE ? "Borders cleared" : "Border applied";
+        showToast(message, true);
+    }
+    
+    private void applyBordersToAllCells() {
+        for (int rowIndex = 0; rowIndex < allDataRows.size(); rowIndex++) {
+            LinearLayout row = allDataRows.get(rowIndex);
+            for (int colIndex = 0; colIndex < row.getChildCount(); colIndex++) {
+                View cell = row.getChildAt(colIndex);
+                applyCellBorderDrawable(rowIndex, colIndex, cell);
+            }
+        }
+    }
+    
+    private void applyCellBorderDrawable(int row, int col, View cell) {
+        if (cell == null) return;
+        
+        CellBorder border = borderManager.getCellBorder(row, col);
+        boolean isLastRow = (row == TOTAL_DATA_ROWS - 1);
+        
+        // If cell has any custom border, use BorderDrawable
+        if (border.hasAnyBorder()) {
+            float density = getResources().getDisplayMetrics().density;
+            BorderDrawable borderDrawable = new BorderDrawable(border, density);
+            cell.setBackground(borderDrawable);
+        } else {
+            // Use default border based on row position
+            int defaultBorder = isLastRow ? R.drawable.excel_data_last_row : R.drawable.excel_data_thin;
+            cell.setBackgroundResource(defaultBorder);
+        }
     }
 }
