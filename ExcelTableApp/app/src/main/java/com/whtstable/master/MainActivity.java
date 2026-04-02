@@ -37,12 +37,12 @@ public class MainActivity extends Activity {
     private LinearLayout dataRowsContainer;
     private EditText cellA1F1, cellG1I1;
     
-    // Summary table cells (new IDs matching layout)
-    private EditText cellTotalKmCount, cellTotalKmAmount;
-    private EditText cellLunchCount, cellLunchAmount;
-    private EditText cellVisitCount, cellVisitAmount;
-    private EditText cellOtherCount, cellOtherAmount;
-    private EditText cellFinalTotal;
+    // Summary table cells (IDs matching layout - cellG20, cellH20 etc.)
+    private TextView cellTotalKmCount, cellTotalKmAmount;
+    private TextView cellLunchCount, cellLunchAmount;
+    private TextView cellVisitCount, cellVisitAmount;
+    private TextView cellOtherCount, cellOtherAmount;
+    private TextView cellFinalTotal;
     
     private Button btnToggleFloating, btnSelectMonth, btnSelectYear, btnHistory;
     private TextView tvCurrentDate, tvEntryCount;
@@ -105,16 +105,16 @@ public class MainActivity extends Activity {
         cellA1F1 = (EditText) findViewById(R.id.cellA1F1);
         cellG1I1 = (EditText) findViewById(R.id.cellG1I1);
         
-        // Summary table cells (new IDs)
-        cellTotalKmCount = (EditText) findViewById(R.id.cellTotalKmCount);
-        cellTotalKmAmount = (EditText) findViewById(R.id.cellTotalKmAmount);
-        cellLunchCount = (EditText) findViewById(R.id.cellLunchCount);
-        cellLunchAmount = (EditText) findViewById(R.id.cellLunchAmount);
-        cellVisitCount = (EditText) findViewById(R.id.cellVisitCount);
-        cellVisitAmount = (EditText) findViewById(R.id.cellVisitAmount);
-        cellOtherCount = (EditText) findViewById(R.id.cellOtherCount);
-        cellOtherAmount = (EditText) findViewById(R.id.cellOtherAmount);
-        cellFinalTotal = (EditText) findViewById(R.id.cellFinalTotal);
+        // Summary table cells (IDs from layout: cellG20 = TOTAL KM count, cellH20 = amount, etc.)
+        cellTotalKmCount = (TextView) findViewById(R.id.cellG20);
+        cellTotalKmAmount = (TextView) findViewById(R.id.cellH20);
+        cellLunchCount = (TextView) findViewById(R.id.cellG21);
+        cellLunchAmount = (TextView) findViewById(R.id.cellH21);
+        cellVisitCount = (TextView) findViewById(R.id.cellG22);
+        cellVisitAmount = (TextView) findViewById(R.id.cellH22);
+        cellOtherCount = (TextView) findViewById(R.id.cellG23);
+        cellOtherAmount = (TextView) findViewById(R.id.cellH23);
+        cellFinalTotal = (TextView) findViewById(R.id.cellH24);
         
         // Buttons
         btnToggleFloating = (Button) findViewById(R.id.btnToggleFloating);
@@ -132,20 +132,25 @@ public class MainActivity extends Activity {
         allDataRows.clear();
         
         // Create all 15 data rows (Row 3-17) with same height (21dp ~ 20.25)
+        // Last row (row 15) will have thick bottom border
         for (int rowIndex = 0; rowIndex < TOTAL_DATA_ROWS; rowIndex++) {
-            LinearLayout row = createExcelRow(rowIndex + 1, DATA_ROW_HEIGHT);
+            boolean isLastRow = (rowIndex == TOTAL_DATA_ROWS - 1);
+            LinearLayout row = createExcelRow(rowIndex + 1, DATA_ROW_HEIGHT, isLastRow);
             allDataRows.add(row);
             dataRowsContainer.addView(row);
         }
     }
     
-    private LinearLayout createExcelRow(final int srNo, int height) {
+    private LinearLayout createExcelRow(final int srNo, int height, boolean isLastRow) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setLayoutParams(new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             dpToPx(height)
         ));
+        
+        // Use thin border for data cells, thick bottom border for last row
+        int borderDrawable = isLastRow ? R.drawable.excel_data_last_row : R.drawable.excel_data_thin;
         
         // Column A: SR NO (auto-filled, centered)
         TextView cellA = new TextView(this);
@@ -154,7 +159,7 @@ public class MainActivity extends Activity {
         cellA.setTextColor(Color.BLACK);
         cellA.setGravity(Gravity.CENTER);
         cellA.setPadding(dpToPx(1), dpToPx(1), dpToPx(1), dpToPx(1));
-        cellA.setBackgroundResource(R.drawable.excel_border_medium);
+        cellA.setBackgroundResource(borderDrawable);
         cellA.setTag("cellA");
         LinearLayout.LayoutParams paramsA = new LinearLayout.LayoutParams(
             dpToPx(COLUMN_WIDTHS[0]),
@@ -164,28 +169,28 @@ public class MainActivity extends Activity {
         row.addView(cellA);
         
         // Column B: BANK NAME (left align)
-        row.addView(createEditCell("", COLUMN_WIDTHS[1], "cellB", Gravity.START | Gravity.CENTER_VERTICAL, 14));
+        row.addView(createEditCell("", COLUMN_WIDTHS[1], "cellB", Gravity.START | Gravity.CENTER_VERTICAL, 14, borderDrawable));
         
         // Column C: APPLICANT NAME (left align, auto-adjust based on content)
-        row.addView(createEditCell("", COLUMN_WIDTHS[2], "cellC", Gravity.START | Gravity.CENTER_VERTICAL, 14));
+        row.addView(createEditCell("", COLUMN_WIDTHS[2], "cellC", Gravity.START | Gravity.CENTER_VERTICAL, 14, borderDrawable));
         
         // Column D: STATUS (center)
-        row.addView(createEditCell("", COLUMN_WIDTHS[3], "cellD", Gravity.CENTER, 14));
+        row.addView(createEditCell("", COLUMN_WIDTHS[3], "cellD", Gravity.CENTER, 14, borderDrawable));
         
         // Column E: REASON FOR CNV (left align, smaller font)
-        row.addView(createEditCell("", COLUMN_WIDTHS[4], "cellE", Gravity.START | Gravity.CENTER_VERTICAL, 12));
+        row.addView(createEditCell("", COLUMN_WIDTHS[4], "cellE", Gravity.START | Gravity.CENTER_VERTICAL, 12, borderDrawable));
         
         // Column F: LATLONG FROM (left align, smaller font)
-        row.addView(createEditCell("", COLUMN_WIDTHS[5], "cellF", Gravity.START | Gravity.CENTER_VERTICAL, 12));
+        row.addView(createEditCell("", COLUMN_WIDTHS[5], "cellF", Gravity.START | Gravity.CENTER_VERTICAL, 12, borderDrawable));
         
         // Column G: LATLONG TO (left align, smaller font)
-        row.addView(createEditCell("", COLUMN_WIDTHS[6], "cellG", Gravity.START | Gravity.CENTER_VERTICAL, 12));
+        row.addView(createEditCell("", COLUMN_WIDTHS[6], "cellG", Gravity.START | Gravity.CENTER_VERTICAL, 12, borderDrawable));
         
         // Column H: AREA (left align)
-        row.addView(createEditCell("", COLUMN_WIDTHS[7], "cellH", Gravity.START | Gravity.CENTER_VERTICAL, 14));
+        row.addView(createEditCell("", COLUMN_WIDTHS[7], "cellH", Gravity.START | Gravity.CENTER_VERTICAL, 14, borderDrawable));
         
         // Column I: KM (right align, number input)
-        EditText cellI = createEditCell("", COLUMN_WIDTHS[8], "cellI", Gravity.END | Gravity.CENTER_VERTICAL, 14);
+        EditText cellI = createEditCell("", COLUMN_WIDTHS[8], "cellI", Gravity.END | Gravity.CENTER_VERTICAL, 14, borderDrawable);
         cellI.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         row.addView(cellI);
         
@@ -211,14 +216,14 @@ public class MainActivity extends Activity {
         return row;
     }
     
-    private EditText createEditCell(String text, int widthDp, String tag, int gravity, int textSizeSp) {
+    private EditText createEditCell(String text, int widthDp, String tag, int gravity, int textSizeSp, int borderDrawable) {
         EditText et = new EditText(this);
         et.setText(text);
         et.setTextSize(textSizeSp);
         et.setTextColor(Color.BLACK);
         et.setGravity(gravity);
         et.setPadding(dpToPx(2), dpToPx(1), dpToPx(2), dpToPx(1));
-        et.setBackgroundResource(R.drawable.excel_border_medium);
+        et.setBackgroundResource(borderDrawable);
         et.setSingleLine(true);
         et.setTag(tag);
         
@@ -385,7 +390,10 @@ public class MainActivity extends Activity {
     private void selectRow(int rowIndex) {
         // Deselect previous row
         if (selectedRowIndex != -1 && selectedRowIndex < allDataRows.size()) {
-            setRowBackground(allDataRows.get(selectedRowIndex), R.drawable.excel_border_medium);
+            // Use thick bottom border for last row, thin for others
+            boolean wasLastRow = (selectedRowIndex == TOTAL_DATA_ROWS - 1);
+            int borderDrawable = wasLastRow ? R.drawable.excel_data_last_row : R.drawable.excel_data_thin;
+            setRowBackground(allDataRows.get(selectedRowIndex), borderDrawable);
         }
         
         // Select new row
