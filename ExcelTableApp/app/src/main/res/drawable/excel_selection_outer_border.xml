@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Light blue background for multi-cell selection (Excel-like) -->
+    <!-- Light blue highlight background (Excel-style) -->
     <item>
         <shape android:shape="rectangle">
             <solid android:color="@color/colorCellSelected"/>
         </shape>
     </item>
-    <!-- Thin border for inner cells (1dp) -->
+    <!-- Thick outer border for selection (Excel-style green border) -->
     <item>
         <shape android:shape="rectangle">
             <stroke 
-                android:width="1dp" 
-                android:color="@color/colorCellSelectedBorder"/>
+                android:width="2dp" 
+                android:color="@color/colorSelectionOuterBorder"/>
             <solid android:color="@android:color/transparent"/>
         </shape>
     </item>

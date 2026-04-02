@@ -6,12 +6,12 @@
             <solid android:color="#FFFFFF"/>
         </shape>
     </item>
-    <!-- Thin Border for Data cells (0.5dp) -->
+    <!-- Thin Border for Data cells (1dp - Normal Excel grid line) -->
     <item>
         <shape android:shape="rectangle">
             <stroke 
-                android:width="0.5dp" 
-                android:color="#000000"/>
+                android:width="1dp" 
+                android:color="#C0C0C0"/>
             <solid android:color="@android:color/transparent"/>
         </shape>
     </item>

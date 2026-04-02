@@ -6,11 +6,11 @@
             <solid android:color="@color/colorCellActive"/>
         </shape>
     </item>
-    <!-- Thick dark border for active cell -->
+    <!-- Thick green border for active cell (Excel-style) -->
     <item>
         <shape android:shape="rectangle">
             <stroke 
-                android:width="2dp" 
+                android:width="2.5dp" 
                 android:color="@color/colorCellActiveBorder"/>
             <solid android:color="@android:color/transparent"/>
         </shape>
