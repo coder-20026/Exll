@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- Thick border around entire selection (drawn as overlay) -->
+    <stroke 
+        android:width="2dp" 
+        android:color="#1A237E"/>
+    <solid android:color="@android:color/transparent"/>
+</shape>
