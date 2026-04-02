@@ -6,11 +6,11 @@
             <solid android:color="#FFFFFF"/>
         </shape>
     </item>
-    <!-- Thick Black Outer Border for Summary Table -->
+    <!-- Thick Black Outer Border for Summary Table (2dp) -->
     <item>
         <shape android:shape="rectangle">
             <stroke 
-                android:width="2.5dp" 
+                android:width="2dp" 
                 android:color="#000000"/>
             <solid android:color="@android:color/transparent"/>
         </shape>

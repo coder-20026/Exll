@@ -6,11 +6,11 @@
             <solid android:color="#FFFFFF"/>
         </shape>
     </item>
-    <!-- Thick Border (all sides solid black) -->
+    <!-- Thick Border (2dp solid black - for Headers, Summary Top/Bottom) -->
     <item>
         <shape android:shape="rectangle">
             <stroke 
-                android:width="2.5dp" 
+                android:width="2dp" 
                 android:color="#000000"/>
             <solid android:color="@android:color/transparent"/>
         </shape>
