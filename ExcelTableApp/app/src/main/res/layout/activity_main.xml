@@ -148,11 +148,11 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal">
 
-                        <!-- A1-F1: FIELD EXECUTIVE NAME (Merged 6 columns) -->
-                        <!-- Width = 34+62+169+30+45+92 = 432dp -->
+                        <!-- A1-F1: FIELD EXECUTIVE NAME (Merged 6 columns: A to F) -->
+                        <!-- Width = 34+62+200+30+45+92 = 463dp -->
                         <EditText
                             android:id="@+id/cellA1F1"
-                            android:layout_width="432dp"
+                            android:layout_width="463dp"
                             android:layout_height="28dp"
                             android:background="@drawable/excel_border_thin"
                             android:gravity="center_vertical"
@@ -164,7 +164,7 @@
                             android:inputType="text"
                             android:singleLine="true" />
 
-                        <!-- G1-I1: DATE (Merged 3 columns) -->
+                        <!-- G1-I1: DATE (Merged 3 columns: G to I) -->
                         <!-- Width = 95+89+38 = 222dp -->
                         <EditText
                             android:id="@+id/cellG1I1"
@@ -182,116 +182,125 @@
 
                     </LinearLayout>
 
-                    <!-- ============ ROW 2: Column Headers (with medium bottom border) ============ -->
+                    <!-- ============ ROW 2: Column Headers - Single Line, Same Height (24dp) ============ -->
                     <LinearLayout
                         android:id="@+id/row2Headers"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:layout_height="24dp"
+                        android:orientation="horizontal"
+                        android:baselineAligned="false">
 
-                        <!-- A2: SR NO -->
+                        <!-- A2: SR NO - Width 34dp (6.71 ratio) -->
                         <TextView
                             android:layout_width="34dp"
-                            android:layout_height="26dp"
+                            android:layout_height="match_parent"
                             android:background="@drawable/excel_header_cell"
                             android:gravity="center"
                             android:text="SR NO"
                             android:textSize="11sp"
                             android:textStyle="bold"
-                            android:textColor="#000000" />
+                            android:textColor="#000000"
+                            android:maxLines="1" />
 
-                        <!-- B2: BANK NAME -->
+                        <!-- B2: BANK NAME - Width 62dp (12.43 ratio) -->
                         <TextView
                             android:layout_width="62dp"
-                            android:layout_height="26dp"
+                            android:layout_height="match_parent"
                             android:background="@drawable/excel_header_cell"
                             android:gravity="center"
                             android:text="BANK NAME"
-                            android:textSize="9sp"
+                            android:textSize="8sp"
                             android:textStyle="bold"
-                            android:textColor="#000000" />
+                            android:textColor="#000000"
+                            android:maxLines="1" />
 
-                        <!-- C2: APPLICANT NAME -->
+                        <!-- C2: APPLICANT NAME - Width 200dp (40.0 ratio) -->
                         <TextView
-                            android:layout_width="169dp"
-                            android:layout_height="26dp"
+                            android:layout_width="200dp"
+                            android:layout_height="match_parent"
                             android:background="@drawable/excel_header_cell"
                             android:gravity="center"
                             android:text="APPLICANT NAME"
                             android:textSize="11sp"
                             android:textStyle="bold"
-                            android:textColor="#000000" />
+                            android:textColor="#000000"
+                            android:maxLines="1" />
 
-                        <!-- D2: STATUS -->
+                        <!-- D2: STATUS - Width 30dp (5.86 ratio) -->
                         <TextView
                             android:layout_width="30dp"
-                            android:layout_height="26dp"
+                            android:layout_height="match_parent"
                             android:background="@drawable/excel_header_cell"
                             android:gravity="center"
                             android:text="STATUS"
-                            android:textSize="7sp"
-                            android:textStyle="bold"
-                            android:textColor="#000000" />
-
-                        <!-- E2: REASON FOR CNV -->
-                        <TextView
-                            android:layout_width="45dp"
-                            android:layout_height="26dp"
-                            android:background="@drawable/excel_header_cell"
-                            android:gravity="center"
-                            android:text="REASON FOR CNV"
                             android:textSize="6sp"
                             android:textStyle="bold"
                             android:textColor="#000000"
-                            android:maxLines="2" />
+                            android:maxLines="1" />
 
-                        <!-- F2: LATLONG FROM -->
+                        <!-- E2: REASON FOR CNV - Width 45dp (8.43 ratio) -->
+                        <TextView
+                            android:layout_width="45dp"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/excel_header_cell"
+                            android:gravity="center"
+                            android:text="REASON"
+                            android:textSize="7sp"
+                            android:textStyle="bold"
+                            android:textColor="#000000"
+                            android:maxLines="1" />
+
+                        <!-- F2: LATLONG FROM - Width 92dp (18.43 ratio) -->
                         <TextView
                             android:layout_width="92dp"
-                            android:layout_height="26dp"
+                            android:layout_height="match_parent"
                             android:background="@drawable/excel_header_cell"
                             android:gravity="center"
                             android:text="LATLONG FROM"
-                            android:textSize="11sp"
+                            android:textSize="9sp"
                             android:textStyle="bold"
-                            android:textColor="#000000" />
+                            android:textColor="#000000"
+                            android:maxLines="1" />
 
-                        <!-- G2: LATLONG TO -->
+                        <!-- G2: LATLONG TO - Width 95dp (19.0 ratio) -->
                         <TextView
                             android:layout_width="95dp"
-                            android:layout_height="26dp"
+                            android:layout_height="match_parent"
                             android:background="@drawable/excel_header_cell"
                             android:gravity="center"
                             android:text="LATLONG TO"
-                            android:textSize="11sp"
+                            android:textSize="10sp"
                             android:textStyle="bold"
-                            android:textColor="#000000" />
+                            android:textColor="#000000"
+                            android:maxLines="1" />
 
-                        <!-- H2: AREA -->
+                        <!-- H2: AREA - Width 89dp (17.86 ratio) -->
                         <TextView
                             android:layout_width="89dp"
-                            android:layout_height="26dp"
+                            android:layout_height="match_parent"
                             android:background="@drawable/excel_header_cell"
                             android:gravity="center"
                             android:text="AREA"
                             android:textSize="11sp"
                             android:textStyle="bold"
-                            android:textColor="#000000" />
+                            android:textColor="#000000"
+                            android:maxLines="1" />
 
-                        <!-- I2: KM -->
+                        <!-- I2: KM - Width 38dp (7.57 ratio) -->
                         <TextView
                             android:layout_width="38dp"
-                            android:layout_height="26dp"
+                            android:layout_height="match_parent"
                             android:background="@drawable/excel_header_cell"
                             android:gravity="center"
                             android:text="KM"
                             android:textSize="11sp"
                             android:textStyle="bold"
-                            android:textColor="#000000" />
+                            android:textColor="#000000"
+                            android:maxLines="1" />
 
                     </LinearLayout>
 
-                    <!-- ============ DATA ROWS CONTAINER (Row 3-15) ============ -->
+                    <!-- ============ DATA ROWS CONTAINER (Row 3-17 = 15 rows) ============ -->
                     <LinearLayout
                         android:id="@+id/dataRowsContainer"
                         android:layout_width="wrap_content"
