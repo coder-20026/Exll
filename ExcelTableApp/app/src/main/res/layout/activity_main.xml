@@ -315,260 +315,218 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="10dp" />
+				<!-- ========== BOTTOM SUMMARY TABLE with THICK OUTER BORDER ========== -->
+				<LinearLayout
+					android:id="@+id/summaryTableContainer"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:orientation="vertical"
+					android:layout_marginStart="340dp"
+					android:background="@drawable/excel_border_thick"
+					android:padding="0dp"> <!-- FIX -->
 
-                <!-- ========== BOTTOM SUMMARY TABLE with THICK OUTER BORDER ========== -->
-                <LinearLayout
-                    android:id="@+id/summaryTableContainer"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginStart="340dp"
-                    android:background="@drawable/excel_border_thick"
-                    android:padding="1dp">
+					<!-- Summary Row 1: Header -->
+					<LinearLayout
+						android:layout_width="wrap_content"
+						android:layout_height="wrap_content"
+						android:orientation="horizontal">
 
-                    <!-- Summary Row 1: Header (NO. OF COUNT, AMOUNT) -->
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+						<TextView
+							android:layout_width="92dp"
+							android:layout_height="28dp" <!-- FIX -->
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center" />
 
-                        <!-- F19: Blank -->
-                        <TextView
-                            android:layout_width="92dp"
-                            android:layout_height="20dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center"
-                            android:text=""
-                            android:textSize="11sp"
-                            android:textColor="#000000" />
+						<TextView
+							android:layout_width="95dp"
+							android:layout_height="28dp" <!-- FIX -->
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center"
+							android:text="NO. OF COUNT"
+							android:textSize="11sp"
+							android:textStyle="bold"
+							android:textColor="#000000" />
 
-                        <!-- G19: NO. OF COUNT -->
-                        <TextView
-                            android:layout_width="95dp"
-                            android:layout_height="20dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center"
-                            android:text="NO. OF COUNT"
-                            android:textSize="11sp"
-                            android:textStyle="bold"
-                            android:textColor="#000000" />
+						<TextView
+							android:layout_width="89dp"
+							android:layout_height="28dp" <!-- FIX -->
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center"
+							android:text="AMOUNT"
+							android:textSize="11sp"
+							android:textStyle="bold"
+							android:textColor="#000000" />
+					</LinearLayout>
 
-                        <!-- H19: AMOUNT -->
-                        <TextView
-                            android:layout_width="89dp"
-                            android:layout_height="20dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center"
-                            android:text="AMOUNT"
-                            android:textSize="11sp"
-                            android:textStyle="bold"
-                            android:textColor="#000000" />
+					<!-- TOTAL KM -->
+					<LinearLayout
+						android:orientation="horizontal">
 
-                    </LinearLayout>
+						<TextView
+							android:layout_width="92dp"
+							android:layout_height="28dp"
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center_vertical|start"
+							android:text="TOTAL KM"
+							android:textSize="11sp"
+							android:textStyle="bold"
+							android:textColor="#000000" />
 
-                    <!-- Summary Row 2: TOTAL KM -->
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+						<EditText
+							android:id="@+id/cellTotalKmCount"
+							android:layout_width="95dp"
+							android:layout_height="28dp"
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center"
+							android:textSize="18sp"
+							android:textStyle="bold"
+							android:inputType="numberDecimal"
+							android:textColor="#000000" />
 
-                        <TextView
-                            android:layout_width="92dp"
-                            android:layout_height="28dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center_vertical|start"
-                            android:text="TOTAL KM"
-                            android:textSize="11sp"
-                            android:textStyle="bold"
-                            android:textColor="#000000" />
+						<EditText
+							android:id="@+id/cellTotalKmAmount"
+							android:layout_width="89dp"
+							android:layout_height="28dp"
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center"
+							android:textSize="18sp"
+							android:textStyle="bold"
+							android:inputType="numberDecimal"
+							android:textColor="#000000" />
+					</LinearLayout>
 
-                        <EditText
-                            android:id="@+id/cellTotalKmCount"
-                            android:layout_width="95dp"
-                            android:layout_height="28dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:inputType="numberDecimal"
-                            android:textColor="#000000" />
+					<!-- LUNCH -->
+					<LinearLayout android:orientation="horizontal">
 
-                        <EditText
-                            android:id="@+id/cellTotalKmAmount"
-                            android:layout_width="89dp"
-                            android:layout_height="28dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:inputType="numberDecimal"
-                            android:textColor="#000000" />
+						<TextView
+							android:layout_width="92dp"
+							android:layout_height="28dp"
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center_vertical|start"
+							android:paddingStart="4dp"
+							android:text="LUNCH"
+							android:textSize="11sp"
+							android:textStyle="bold"
+							android:textColor="#000000" />
 
-                    </LinearLayout>
+						<EditText
+							android:id="@+id/cellLunchCount"
+							android:layout_width="95dp"
+							android:layout_height="28dp"
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center"
+							android:textSize="18sp"
+							android:textStyle="bold"
+							android:inputType="numberDecimal"
+							android:textColor="#000000" />
 
-                    <!-- Summary Row 3: LUNCH -->
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+						<EditText
+							android:id="@+id/cellLunchAmount"
+							android:layout_width="89dp"
+							android:layout_height="28dp"
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center"
+							android:textSize="18sp"
+							android:textStyle="bold"
+							android:inputType="numberDecimal"
+							android:textColor="#000000" />
+					</LinearLayout>
 
-                        <TextView
-                            android:layout_width="92dp"
-                            android:layout_height="28dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center_vertical|start"
-                            android:paddingStart="4dp"
-                            android:text="LUNCH"
-                            android:textSize="11sp"
-                            android:textStyle="bold"
-                            android:textColor="#000000" />
+					<!-- VISIT -->
+					<LinearLayout android:orientation="horizontal">
 
-                        <EditText
-                            android:id="@+id/cellLunchCount"
-                            android:layout_width="95dp"
-                            android:layout_height="28dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:inputType="numberDecimal"
-                            android:textColor="#000000" />
+						<TextView
+							android:layout_width="92dp"
+							android:layout_height="28dp"
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center_vertical|start"
+							android:text="VISIT"
+							android:textSize="11sp"
+							android:textStyle="bold"
+							android:textColor="#000000" />
 
-                        <EditText
-                            android:id="@+id/cellLunchAmount"
-                            android:layout_width="89dp"
-                            android:layout_height="28dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:inputType="numberDecimal"
-                            android:textColor="#000000" />
+						<EditText
+							android:id="@+id/cellVisitCount"
+							android:layout_width="95dp"
+							android:layout_height="28dp"
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center"
+							android:textSize="18sp"
+							android:textStyle="bold"
+							android:inputType="numberDecimal"
+							android:textColor="#000000" />
 
-                    </LinearLayout>
+						<EditText
+							android:id="@+id/cellVisitAmount"
+							android:layout_width="89dp"
+							android:layout_height="28dp"
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center"
+							android:textSize="18sp"
+							android:textStyle="bold"
+							android:inputType="numberDecimal"
+							android:textColor="#000000" />
+					</LinearLayout>
 
-                    <!-- Summary Row 4: VISIT -->
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+					<!-- OTHER -->
+					<LinearLayout android:orientation="horizontal">
 
-                        <TextView
-                            android:layout_width="92dp"
-                            android:layout_height="28dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center_vertical|start"
-                            android:text="VISIT"
-                            android:textSize="11sp"
-                            android:textStyle="bold"
-                            android:textColor="#000000" />
+						<TextView
+							android:layout_width="92dp"
+							android:layout_height="28dp"
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center_vertical|start"
+							android:text="OTHER"
+							android:textSize="11sp"
+							android:textStyle="bold"
+							android:textColor="#000000" />
 
-                        <EditText
-                            android:id="@+id/cellVisitCount"
-                            android:layout_width="95dp"
-                            android:layout_height="28dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:inputType="numberDecimal"
-                            android:textColor="#000000" />
+						<EditText
+							android:id="@+id/cellOtherCount"
+							android:layout_width="95dp"
+							android:layout_height="28dp"
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center"
+							android:textSize="18sp"
+							android:textStyle="bold"
+							android:inputType="numberDecimal"
+							android:textColor="#000000" />
 
-                        <EditText
-                            android:id="@+id/cellVisitAmount"
-                            android:layout_width="89dp"
-                            android:layout_height="28dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:inputType="numberDecimal"
-                            android:textColor="#000000" />
+						<EditText
+							android:id="@+id/cellOtherAmount"
+							android:layout_width="89dp"
+							android:layout_height="28dp"
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center"
+							android:textSize="18sp"
+							android:textStyle="bold"
+							android:inputType="numberDecimal"
+							android:textColor="#000000" />
+					</LinearLayout>
 
-                    </LinearLayout>
+					<!-- TOTAL AMOUNT -->
+					<LinearLayout android:orientation="horizontal">
 
-                    <!-- Summary Row 5: OTHER -->
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+						<TextView
+							android:layout_width="187dp"
+							android:layout_height="28dp" <!-- FIX -->
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center"
+							android:text="TOTAL AMOUNT"
+							android:textSize="11sp"
+							android:textStyle="bold"
+							android:textColor="#000000" />
 
-                        <TextView
-                            android:layout_width="92dp"
-                            android:layout_height="28dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center_vertical|start"
-                            android:text="OTHER"
-                            android:textSize="11sp"
-                            android:textStyle="bold"
-                            android:textColor="#000000" />
+						<EditText
+							android:id="@+id/cellFinalTotal"
+							android:layout_width="89dp"
+							android:layout_height="28dp" <!-- FIX -->
+							android:background="@drawable/excel_border_thin"
+							android:gravity="center"
+							android:textSize="16sp"
+							android:textStyle="bold"
+							android:inputType="numberDecimal"
+							android:textColor="#000000" />
+					</LinearLayout>
 
-                        <EditText
-                            android:id="@+id/cellOtherCount"
-                            android:layout_width="95dp"
-                            android:layout_height="28dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:inputType="numberDecimal"
-                            android:textColor="#000000" />
-
-                        <EditText
-                            android:id="@+id/cellOtherAmount"
-                            android:layout_width="89dp"
-                            android:layout_height="28dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:inputType="numberDecimal"
-                            android:textColor="#000000" />
-
-                    </LinearLayout>
-
-                    <!-- Summary Row 6: TOTAL AMOUNT (F24+G24 Merged) -->
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <!-- F24+G24 Merged: TOTAL AMOUNT label -->
-                        <TextView
-                            android:layout_width="187dp"
-                            android:layout_height="24dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center"
-                            android:text="TOTAL AMOUNT"
-                            android:textSize="11sp"
-                            android:textStyle="bold"
-                            android:textColor="#000000" />
-
-                        <!-- H24: Final Total Value -->
-                        <EditText
-                            android:id="@+id/cellFinalTotal"
-                            android:layout_width="89dp"
-                            android:layout_height="24dp"
-                            android:background="@drawable/excel_border_thin"
-                            android:gravity="center"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:inputType="numberDecimal"
-                            android:textColor="#000000" />
-
-                    </LinearLayout>
-
-                </LinearLayout>
-
-                <!-- Bottom padding -->
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="16dp" />
-
-            </LinearLayout>
-
-        </ScrollView>
-
-    </HorizontalScrollView>
-
-</LinearLayout>
+				</LinearLayout>
