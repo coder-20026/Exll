@@ -23,6 +23,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
+import android.view.MotionEvent;
+import android.os.Handler;
+import android.os.Looper;
 
 import java.util.ArrayList;
 
@@ -59,6 +62,18 @@ public class MainActivity extends Activity {
     private int selectedCellCol = -1;
     private View selectedCellView = null;
     
+    // Excel-style Multi-Cell Selection
+    private CellSelectionManager selectionManager;
+    private boolean isDraggingSelection = false;
+    private Handler longPressHandler = new Handler(Looper.getMainLooper());
+    private Runnable longPressRunnable;
+    private static final long LONG_PRESS_DELAY = 300; // ms for drag selection start
+    private int touchStartRow = -1;
+    private int touchStartCol = -1;
+    
+    // Selection info display
+    private TextView tvSelectionInfo;
+    
     // Data rows storage
     private ArrayList<LinearLayout> allDataRows;
     private int selectedRowIndex = -1;
@@ -91,6 +106,10 @@ public class MainActivity extends Activity {
         
         // Initialize Border Manager
         borderManager = BorderManager.getInstance(this);
+        
+        // Initialize Cell Selection Manager
+        selectionManager = CellSelectionManager.getInstance();
+        setupSelectionListener();
         
         // Load saved month/year
         currentMonth = dbHelper.getSelectedMonth();
@@ -148,11 +167,190 @@ public class MainActivity extends Activity {
         btnBorders = (Button) findViewById(R.id.btnBorders);
         tvCurrentDate = (TextView) findViewById(R.id.tvCurrentDate);
         tvEntryCount = (TextView) findViewById(R.id.tvEntryCount);
+        tvSelectionInfo = (TextView) findViewById(R.id.tvSelectionInfo);
         
         // Border Panel Container
         borderPanelContainer = findViewById(R.id.borderPanelContainer);
         
         allDataRows = new ArrayList<LinearLayout>();
+        
+        // Setup column header click listeners for column selection
+        setupColumnHeaderSelection();
+    }
+    
+    private void setupColumnHeaderSelection() {
+        // Find the row2Headers (column header row)
+        LinearLayout row2Headers = (LinearLayout) findViewById(R.id.row2Headers);
+        if (row2Headers == null) return;
+        
+        // Add click listeners to each column header
+        for (int i = 0; i < row2Headers.getChildCount(); i++) {
+            final int colIndex = i;
+            View header = row2Headers.getChildAt(i);
+            
+            header.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Select entire column
+                    selectionManager.selectColumn(colIndex);
+                    showToast("Column " + (char)('A' + colIndex) + " selected", true);
+                }
+            });
+            
+            // Make headers clickable
+            header.setClickable(true);
+            header.setFocusable(true);
+        }
+    }
+    
+    // ==================== EXCEL-STYLE SELECTION SYSTEM ====================
+    
+    private void setupSelectionListener() {
+        selectionManager.setSelectionChangeListener(new CellSelectionManager.SelectionChangeListener() {
+            @Override
+            public void onSelectionChanged(int startRow, int endRow, int startCol, int endCol, int mode) {
+                updateSelectionVisuals();
+                updateSelectionInfoDisplay();
+                
+                // Sync with BorderManager for border operations
+                borderManager.setSelection(startRow, endRow, startCol, endCol);
+            }
+            
+            @Override
+            public void onSelectionCleared() {
+                clearSelectionVisuals();
+                updateSelectionInfoDisplay();
+                borderManager.clearSelection();
+            }
+        });
+    }
+    
+    private void updateSelectionVisuals() {
+        // Reset all cells to default background first
+        for (int rowIndex = 0; rowIndex < allDataRows.size(); rowIndex++) {
+            LinearLayout row = allDataRows.get(rowIndex);
+            boolean isLastRow = (rowIndex == TOTAL_DATA_ROWS - 1);
+            
+            for (int colIndex = 0; colIndex < row.getChildCount(); colIndex++) {
+                View cell = row.getChildAt(colIndex);
+                if (cell != null) {
+                    if (selectionManager.isCellSelected(rowIndex, colIndex)) {
+                        // Check if this is the active cell (where selection started)
+                        if (selectionManager.isActiveCell(rowIndex, colIndex)) {
+                            cell.setBackgroundResource(R.drawable.excel_cell_active);
+                        } else {
+                            cell.setBackgroundResource(R.drawable.excel_cell_multi_selected);
+                        }
+                    } else {
+                        // Apply default or saved border
+                        applyCellBorderDrawable(rowIndex, colIndex, cell);
+                    }
+                }
+            }
+        }
+    }
+    
+    private void clearSelectionVisuals() {
+        // Reset all cells to default border
+        for (int rowIndex = 0; rowIndex < allDataRows.size(); rowIndex++) {
+            LinearLayout row = allDataRows.get(rowIndex);
+            for (int colIndex = 0; colIndex < row.getChildCount(); colIndex++) {
+                View cell = row.getChildAt(colIndex);
+                if (cell != null) {
+                    applyCellBorderDrawable(rowIndex, colIndex, cell);
+                }
+            }
+        }
+    }
+    
+    private void updateSelectionInfoDisplay() {
+        if (tvSelectionInfo != null) {
+            if (selectionManager.hasSelection()) {
+                String selStr = selectionManager.getSelectionString();
+                int count = selectionManager.getSelectedCellCount();
+                tvSelectionInfo.setText(selStr + " (" + count + " cells)");
+                tvSelectionInfo.setVisibility(View.VISIBLE);
+            } else {
+                tvSelectionInfo.setVisibility(View.GONE);
+            }
+        }
+    }
+    
+    /**
+     * Get cell position from touch coordinates
+     */
+    private int[] getCellPositionFromTouch(View rowView, float x) {
+        int rowIndex = allDataRows.indexOf(rowView);
+        if (rowIndex < 0) return null;
+        
+        LinearLayout row = (LinearLayout) rowView;
+        int colIndex = -1;
+        float accumulatedWidth = 0;
+        
+        for (int i = 0; i < row.getChildCount(); i++) {
+            View child = row.getChildAt(i);
+            accumulatedWidth += child.getWidth();
+            if (x < accumulatedWidth) {
+                colIndex = i;
+                break;
+            }
+        }
+        
+        if (colIndex < 0) {
+            colIndex = row.getChildCount() - 1; // Last column
+        }
+        
+        return new int[]{rowIndex, colIndex};
+    }
+    
+    /**
+     * Get cell position from global touch coordinates within dataRowsContainer
+     */
+    private int[] getCellPositionFromGlobalTouch(float rawX, float rawY) {
+        if (dataRowsContainer == null || allDataRows.isEmpty()) return null;
+        
+        int[] containerLocation = new int[2];
+        dataRowsContainer.getLocationOnScreen(containerLocation);
+        
+        float localX = rawX - containerLocation[0];
+        float localY = rawY - containerLocation[1];
+        
+        // Find row
+        int rowIndex = -1;
+        float accumulatedHeight = 0;
+        for (int i = 0; i < allDataRows.size(); i++) {
+            accumulatedHeight += allDataRows.get(i).getHeight();
+            if (localY < accumulatedHeight) {
+                rowIndex = i;
+                break;
+            }
+        }
+        
+        // Clamp row
+        if (rowIndex < 0) {
+            if (localY < 0) rowIndex = 0;
+            else rowIndex = allDataRows.size() - 1;
+        }
+        
+        // Find column
+        LinearLayout row = allDataRows.get(rowIndex);
+        int colIndex = -1;
+        float accumulatedWidth = 0;
+        for (int i = 0; i < row.getChildCount(); i++) {
+            accumulatedWidth += row.getChildAt(i).getWidth();
+            if (localX < accumulatedWidth) {
+                colIndex = i;
+                break;
+            }
+        }
+        
+        // Clamp column
+        if (colIndex < 0) {
+            if (localX < 0) colIndex = 0;
+            else colIndex = row.getChildCount() - 1;
+        }
+        
+        return new int[]{rowIndex, colIndex};
     }
     
     private void createAllDataRows() {
@@ -222,24 +420,11 @@ public class MainActivity extends Activity {
         cellI.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         row.addView(cellI);
         
-        // Row click handler
+        // Row index for touch handling
         final int rowIndexFinal = srNo - 1;
-        row.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                selectRow(rowIndexFinal);
-                copyRowToClipboard(rowIndexFinal);
-            }
-        });
         
-        // Long press for options
-        row.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                showRowOptionsDialog(rowIndexFinal);
-                return true;
-            }
-        });
+        // Setup touch listener for multi-cell selection
+        setupRowTouchListener(row, rowIndexFinal);
         
         return row;
     }
@@ -279,6 +464,122 @@ public class MainActivity extends Activity {
         });
         
         return et;
+    }
+    
+    private void setupRowTouchListener(final LinearLayout row, final int rowIndex) {
+        row.setOnTouchListener(new View.OnTouchListener() {
+            private float startX, startY;
+            private boolean isLongPressed = false;
+            
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startX = event.getRawX();
+                        startY = event.getRawY();
+                        isLongPressed = false;
+                        
+                        // Get cell position from touch
+                        int[] pos = getCellPositionFromTouch(row, event.getX());
+                        if (pos != null) {
+                            touchStartRow = pos[0];
+                            touchStartCol = pos[1];
+                            
+                            // Start long press detection for drag selection
+                            final int startRow = touchStartRow;
+                            final int startCol = touchStartCol;
+                            
+                            longPressRunnable = new Runnable() {
+                                @Override
+                                public void run() {
+                                    isLongPressed = true;
+                                    isDraggingSelection = true;
+                                    selectionManager.startDragSelection(startRow, startCol);
+                                    
+                                    // Vibrate for feedback (optional)
+                                    // vibrator.vibrate(50);
+                                }
+                            };
+                            longPressHandler.postDelayed(longPressRunnable, LONG_PRESS_DELAY);
+                        }
+                        return true;
+                        
+                    case MotionEvent.ACTION_MOVE:
+                        // Check if moved significantly (to cancel long press if just scrolling)
+                        float dx = Math.abs(event.getRawX() - startX);
+                        float dy = Math.abs(event.getRawY() - startY);
+                        
+                        if (!isLongPressed && (dx > dpToPx(10) || dy > dpToPx(10))) {
+                            // Cancel long press - user is scrolling
+                            longPressHandler.removeCallbacks(longPressRunnable);
+                        }
+                        
+                        // If dragging selection, update it
+                        if (isDraggingSelection) {
+                            int[] currentPos = getCellPositionFromGlobalTouch(event.getRawX(), event.getRawY());
+                            if (currentPos != null) {
+                                selectionManager.updateDragSelection(currentPos[0], currentPos[1]);
+                            }
+                            return true;
+                        }
+                        break;
+                        
+                    case MotionEvent.ACTION_UP:
+                        longPressHandler.removeCallbacks(longPressRunnable);
+                        
+                        if (isDraggingSelection) {
+                            // End drag selection
+                            selectionManager.endDragSelection();
+                            isDraggingSelection = false;
+                            
+                            // Show selection count
+                            int count = selectionManager.getSelectedCellCount();
+                            if (count > 1) {
+                                showToast(count + " cells selected", true);
+                            }
+                        } else {
+                            // This was a tap - handle based on column
+                            int[] tapPos = getCellPositionFromTouch(row, event.getX());
+                            if (tapPos != null) {
+                                if (tapPos[1] == 0) {
+                                    // Tapped on column A (SR NO) - select entire row
+                                    selectionManager.selectRow(tapPos[0]);
+                                    showToast("Row " + (tapPos[0] + 1) + " selected", true);
+                                } else {
+                                    // Tapped on a cell - single cell selection
+                                    selectionManager.selectSingleCell(tapPos[0], tapPos[1]);
+                                    
+                                    // Focus the cell for editing
+                                    View cell = row.getChildAt(tapPos[1]);
+                                    if (cell instanceof EditText) {
+                                        cell.requestFocus();
+                                    }
+                                }
+                            }
+                        }
+                        return true;
+                        
+                    case MotionEvent.ACTION_CANCEL:
+                        longPressHandler.removeCallbacks(longPressRunnable);
+                        isDraggingSelection = false;
+                        break;
+                }
+                return false;
+            }
+        });
+        
+        // Long press for row options dialog (double tap or menu button)
+        row.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                // Long press handled by touch listener for drag selection
+                // Show options dialog only if not dragging
+                if (!isDraggingSelection) {
+                    showRowOptionsDialog(rowIndex);
+                }
+                return true;
+            }
+        });
     }
     
     private int getColumnIndex(String tag) {
@@ -392,6 +693,9 @@ public class MainActivity extends Activity {
     }
     
     private void loadTableFromDatabase() {
+        // Clear selection
+        selectionManager.clearSelection();
+        
         // Clear all data rows first
         clearAllDataRows();
         
@@ -450,19 +754,9 @@ public class MainActivity extends Activity {
     }
     
     private void selectRow(int rowIndex) {
-        // Deselect previous row
-        if (selectedRowIndex != -1 && selectedRowIndex < allDataRows.size()) {
-            // Use thick bottom border for last row, thin for others
-            boolean wasLastRow = (selectedRowIndex == TOTAL_DATA_ROWS - 1);
-            int borderDrawable = wasLastRow ? R.drawable.excel_data_last_row : R.drawable.excel_data_thin;
-            setRowBackground(allDataRows.get(selectedRowIndex), borderDrawable);
-        }
-        
-        // Select new row
+        // Use new selection manager for row selection
+        selectionManager.selectRow(rowIndex);
         selectedRowIndex = rowIndex;
-        if (rowIndex < allDataRows.size()) {
-            setRowBackground(allDataRows.get(rowIndex), R.drawable.excel_cell_selected);
-        }
     }
     
     private void setRowBackground(LinearLayout row, int backgroundRes) {
@@ -499,6 +793,52 @@ public class MainActivity extends Activity {
         clipboard.setPrimaryClip(clip);
         
         showToast("Row copied! Paste in Excel", true);
+    }
+    
+    /**
+     * Copy selected cells to clipboard (Excel-style multi-cell copy)
+     */
+    private void copySelectionToClipboard() {
+        if (!selectionManager.hasSelection()) {
+            showToast("No cells selected", false);
+            return;
+        }
+        
+        int startRow = selectionManager.getStartRow();
+        int endRow = selectionManager.getEndRow();
+        int startCol = selectionManager.getStartCol();
+        int endCol = selectionManager.getEndCol();
+        
+        StringBuilder data = new StringBuilder();
+        
+        for (int row = startRow; row <= endRow; row++) {
+            if (row >= allDataRows.size()) break;
+            LinearLayout rowLayout = allDataRows.get(row);
+            
+            for (int col = startCol; col <= endCol; col++) {
+                if (col > startCol) {
+                    data.append("\t"); // Tab separator for Excel
+                }
+                
+                View cell = rowLayout.getChildAt(col);
+                if (cell instanceof TextView) {
+                    data.append(((TextView) cell).getText().toString());
+                } else if (cell instanceof EditText) {
+                    data.append(((EditText) cell).getText().toString());
+                }
+            }
+            
+            if (row < endRow) {
+                data.append("\n"); // New line for next row
+            }
+        }
+        
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("Excel Selection", data.toString());
+        clipboard.setPrimaryClip(clip);
+        
+        int cellCount = selectionManager.getSelectedCellCount();
+        showToast(cellCount + " cells copied!", true);
     }
     
     private void toggleFloatingButton() {
@@ -611,23 +951,39 @@ public class MainActivity extends Activity {
     }
     
     private void showRowOptionsDialog(final int rowIndex) {
-        final CharSequence[] options = {"Copy Row", "Delete Row", "Copy All Data"};
+        // Build options based on selection state
+        ArrayList<CharSequence> optionsList = new ArrayList<CharSequence>();
+        optionsList.add("Copy Row");
+        optionsList.add("Delete Row");
+        
+        // Add copy selection option if multiple cells are selected
+        if (selectionManager.hasSelection() && selectionManager.getSelectedCellCount() > 1) {
+            optionsList.add("Copy Selection (" + selectionManager.getSelectedCellCount() + " cells)");
+        }
+        
+        optionsList.add("Copy All Data");
+        optionsList.add("Clear Selection");
+        
+        final CharSequence[] options = optionsList.toArray(new CharSequence[0]);
         
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("ROW OPTIONS");
         builder.setItems(options, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                switch (which) {
-                    case 0:
-                        copyRowToClipboard(rowIndex);
-                        break;
-                    case 1:
-                        deleteRow(rowIndex);
-                        break;
-                    case 2:
-                        copyAllFilledRows();
-                        break;
+                String selected = options[which].toString();
+                
+                if (selected.equals("Copy Row")) {
+                    copyRowToClipboard(rowIndex);
+                } else if (selected.equals("Delete Row")) {
+                    deleteRow(rowIndex);
+                } else if (selected.startsWith("Copy Selection")) {
+                    copySelectionToClipboard();
+                } else if (selected.equals("Copy All Data")) {
+                    copyAllFilledRows();
+                } else if (selected.equals("Clear Selection")) {
+                    selectionManager.clearSelection();
+                    showToast("Selection cleared", true);
                 }
             }
         });
@@ -828,40 +1184,36 @@ public class MainActivity extends Activity {
     }
     
     private void selectCellForBorder(int row, int col, View cellView) {
-        // Clear previous selection highlight
-        if (selectedCellView != null) {
-            applyCellBorderDrawable(selectedCellRow, selectedCellCol, selectedCellView);
-        }
-        
-        // Set new selection
+        // Set new selection using selection manager
         selectedCellRow = row;
         selectedCellCol = col;
         selectedCellView = cellView;
         
-        // Update border manager selection
-        borderManager.setSingleSelection(row, col);
-        
-        // Highlight selected cell
-        if (cellView != null) {
-            cellView.setBackgroundResource(R.drawable.excel_cell_selected);
-        }
+        // Use selection manager for selection (this will update visuals)
+        selectionManager.selectSingleCell(row, col);
     }
     
     private void clearCellSelection() {
-        if (selectedCellView != null) {
-            applyCellBorderDrawable(selectedCellRow, selectedCellCol, selectedCellView);
-        }
         selectedCellRow = -1;
         selectedCellCol = -1;
         selectedCellView = null;
-        borderManager.clearSelection();
+        selectionManager.clearSelection();
     }
     
     private void applyBorderToSelection(int borderType) {
-        if (!borderManager.hasSelection()) {
-            showToast("Please select a cell first", false);
+        // Check if we have a selection (using selection manager)
+        if (!selectionManager.hasSelection()) {
+            showToast("Please select cells first", false);
             return;
         }
+        
+        // Sync selection from selection manager to border manager
+        borderManager.setSelection(
+            selectionManager.getStartRow(),
+            selectionManager.getEndRow(),
+            selectionManager.getStartCol(),
+            selectionManager.getEndCol()
+        );
         
         // Default border style is THIN
         int borderStyle = CellBorder.STYLE_THIN;
@@ -872,8 +1224,14 @@ public class MainActivity extends Activity {
         // Refresh cell borders visually
         applyBordersToAllCells();
         
+        // Update selection visuals to show applied borders
+        updateSelectionVisuals();
+        
         // Show feedback
-        String message = borderType == BorderManager.BORDER_TYPE_NONE ? "Borders cleared" : "Border applied";
+        int cellCount = selectionManager.getSelectedCellCount();
+        String message = borderType == BorderManager.BORDER_TYPE_NONE ? 
+            "Borders cleared (" + cellCount + " cells)" : 
+            "Border applied (" + cellCount + " cells)";
         showToast(message, true);
     }
     
