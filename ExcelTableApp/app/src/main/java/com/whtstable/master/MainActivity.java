@@ -790,6 +790,7 @@ public class MainActivity extends Activity {
     }
     
     private void toggleBorderPanel() {
+        android.util.Log.d("v0", "toggleBorderPanel called, visible=" + isBorderPanelVisible + ", container=" + (borderPanelContainer != null));
         if (isBorderPanelVisible) {
             hideBorderPanel();
         } else {
@@ -798,10 +799,12 @@ public class MainActivity extends Activity {
     }
     
     private void showBorderPanel() {
+        android.util.Log.d("v0", "showBorderPanel called, container=" + (borderPanelContainer != null));
         if (borderPanelContainer != null) {
             borderPanelContainer.setVisibility(View.VISIBLE);
             isBorderPanelVisible = true;
             btnBorders.setBackgroundResource(R.drawable.btn_danger_bg);
+            android.util.Log.d("v0", "Border panel shown");
             
             // If a row is selected, select its first cell
             if (selectedRowIndex >= 0 && selectedRowIndex < allDataRows.size()) {
@@ -809,6 +812,9 @@ public class MainActivity extends Activity {
             }
             
             showToast("Tap cell to select, then choose border", true);
+        } else {
+            android.util.Log.d("v0", "borderPanelContainer is NULL!");
+            showToast("Border panel not found!", false);
         }
     }
     
