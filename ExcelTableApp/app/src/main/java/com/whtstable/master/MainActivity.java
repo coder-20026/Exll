@@ -13,6 +13,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -28,22 +29,28 @@ public class MainActivity extends Activity {
     // Excel Column Widths (in dp) - matching Excel proportions
     // A=34dp, B=62dp, C=169dp, D=30dp, E=45dp, F=92dp, G=95dp, H=89dp, I=38dp
     private static final int[] COLUMN_WIDTHS = {34, 62, 169, 30, 45, 92, 95, 89, 38};
-    private static final int DATA_ROW_HEIGHT = 20;      // Row 3-12 height
-    private static final int ADDITIONAL_ROW_HEIGHT = 15; // Row 13-17 height
+    private static final int DATA_ROW_HEIGHT = 22;       // Row 3-12 height (main data)
+    private static final int ADDITIONAL_ROW_HEIGHT = 18; // Row 13-15 height
     private static final int TOTAL_COLUMNS = 9;
+    private static final int MAIN_DATA_ROWS = 10;        // Row 3-12
+    private static final int ADDITIONAL_DATA_ROWS = 3;   // Row 13-15
     
     // Views
     private LinearLayout dataRowsContainer;
-    private LinearLayout additionalRowsContainer;
     private EditText cellA1F1, cellG1I1;
-    private EditText cellG20, cellH20, cellG21, cellH21, cellG22, cellH22, cellG23, cellH23;
-    private TextView cellH24;
-    private Button btnToggleFloating, btnSelectMonth, btnSelectYear, btnHistory, btnCopyAll, btnClearTable;
+    
+    // Summary table cells (new IDs matching layout)
+    private EditText cellTotalKmCount, cellTotalKmAmount;
+    private EditText cellLunchCount, cellLunchAmount;
+    private EditText cellVisitCount, cellVisitAmount;
+    private EditText cellOtherCount, cellOtherAmount;
+    private EditText cellFinalTotal;
+    
+    private Button btnToggleFloating, btnSelectMonth, btnSelectYear, btnHistory;
     private TextView tvCurrentDate, tvEntryCount;
     
     // Data rows storage
-    private ArrayList<LinearLayout> dataRows;
-    private ArrayList<LinearLayout> additionalRows;
+    private ArrayList<LinearLayout> allDataRows;
     private int selectedRowIndex = -1;
     private boolean floatingButtonEnabled = false;
     
@@ -55,7 +62,7 @@ public class MainActivity extends Activity {
     // Excel Column headers for copy
     private String[] columnHeaders = {
         "SR NO", "BANK NAME", "APPLICANT NAME", "STATUS", "REASON FOR CNV", 
-        "LAT-LONG FROM", "LAT-LONG TO", "AREA", "KM"
+        "LATLONG FROM", "LATLONG TO", "AREA", "KM"
     };
     
     // Months array
@@ -79,11 +86,8 @@ public class MainActivity extends Activity {
         // Initialize views
         initializeViews();
         
-        // Create Excel data rows (Row 3-12 = 10 rows)
-        createDataRows(10);
-        
-        // Create additional rows (Row 13-17 = 5 rows)
-        createAdditionalRows(5);
+        // Create all data rows (Row 3-15 = 13 rows total)
+        createAllDataRows();
         
         // Load saved data for current month/year
         loadTableFromDatabase();
@@ -96,62 +100,55 @@ public class MainActivity extends Activity {
     }
     
     private void initializeViews() {
-        // Main containers
+        // Main container
         dataRowsContainer = (LinearLayout) findViewById(R.id.dataRowsContainer);
-        additionalRowsContainer = (LinearLayout) findViewById(R.id.additionalRowsContainer);
         
         // Header cells (editable)
         cellA1F1 = (EditText) findViewById(R.id.cellA1F1);
         cellG1I1 = (EditText) findViewById(R.id.cellG1I1);
         
-        // Summary table cells
-        cellG20 = (EditText) findViewById(R.id.cellG20);
-        cellH20 = (EditText) findViewById(R.id.cellH20);
-        cellG21 = (EditText) findViewById(R.id.cellG21);
-        cellH21 = (EditText) findViewById(R.id.cellH21);
-        cellG22 = (EditText) findViewById(R.id.cellG22);
-        cellH22 = (EditText) findViewById(R.id.cellH22);
-        cellG23 = (EditText) findViewById(R.id.cellG23);
-        cellH23 = (EditText) findViewById(R.id.cellH23);
-        cellH24 = (TextView) findViewById(R.id.cellH24);
+        // Summary table cells (new IDs)
+        cellTotalKmCount = (EditText) findViewById(R.id.cellTotalKmCount);
+        cellTotalKmAmount = (EditText) findViewById(R.id.cellTotalKmAmount);
+        cellLunchCount = (EditText) findViewById(R.id.cellLunchCount);
+        cellLunchAmount = (EditText) findViewById(R.id.cellLunchAmount);
+        cellVisitCount = (EditText) findViewById(R.id.cellVisitCount);
+        cellVisitAmount = (EditText) findViewById(R.id.cellVisitAmount);
+        cellOtherCount = (EditText) findViewById(R.id.cellOtherCount);
+        cellOtherAmount = (EditText) findViewById(R.id.cellOtherAmount);
+        cellFinalTotal = (EditText) findViewById(R.id.cellFinalTotal);
         
         // Buttons
         btnToggleFloating = (Button) findViewById(R.id.btnToggleFloating);
         btnSelectMonth = (Button) findViewById(R.id.btnSelectMonth);
         btnSelectYear = (Button) findViewById(R.id.btnSelectYear);
         btnHistory = (Button) findViewById(R.id.btnHistory);
-        btnCopyAll = (Button) findViewById(R.id.btnCopyAll);
-        btnClearTable = (Button) findViewById(R.id.btnClearTable);
         tvCurrentDate = (TextView) findViewById(R.id.tvCurrentDate);
         tvEntryCount = (TextView) findViewById(R.id.tvEntryCount);
         
-        dataRows = new ArrayList<LinearLayout>();
-        additionalRows = new ArrayList<LinearLayout>();
+        allDataRows = new ArrayList<LinearLayout>();
     }
     
-    private void createDataRows(int count) {
+    private void createAllDataRows() {
         dataRowsContainer.removeAllViews();
-        dataRows.clear();
+        allDataRows.clear();
         
-        for (int rowIndex = 0; rowIndex < count; rowIndex++) {
-            LinearLayout row = createExcelRow(rowIndex + 1, DATA_ROW_HEIGHT, true);
-            dataRows.add(row);
+        // Create main data rows (Row 3-12 = 10 rows, 22dp height)
+        for (int rowIndex = 0; rowIndex < MAIN_DATA_ROWS; rowIndex++) {
+            LinearLayout row = createExcelRow(rowIndex + 1, DATA_ROW_HEIGHT);
+            allDataRows.add(row);
+            dataRowsContainer.addView(row);
+        }
+        
+        // Create additional rows (Row 13-15 = 3 rows, 18dp height)
+        for (int rowIndex = 0; rowIndex < ADDITIONAL_DATA_ROWS; rowIndex++) {
+            LinearLayout row = createExcelRow(MAIN_DATA_ROWS + rowIndex + 1, ADDITIONAL_ROW_HEIGHT);
+            allDataRows.add(row);
             dataRowsContainer.addView(row);
         }
     }
     
-    private void createAdditionalRows(int count) {
-        additionalRowsContainer.removeAllViews();
-        additionalRows.clear();
-        
-        for (int rowIndex = 0; rowIndex < count; rowIndex++) {
-            LinearLayout row = createExcelRow(11 + rowIndex, ADDITIONAL_ROW_HEIGHT, false);
-            additionalRows.add(row);
-            additionalRowsContainer.addView(row);
-        }
-    }
-    
-    private LinearLayout createExcelRow(final int srNo, int height, boolean isDataRow) {
+    private LinearLayout createExcelRow(final int srNo, int height) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setLayoutParams(new LinearLayout.LayoutParams(
@@ -159,17 +156,47 @@ public class MainActivity extends Activity {
             dpToPx(height)
         ));
         
-        // Column A: SR NO (auto-filled)
-        TextView cellA = createTextCell(String.valueOf(srNo), COLUMN_WIDTHS[0], true);
+        // Column A: SR NO (auto-filled, centered)
+        TextView cellA = new TextView(this);
+        cellA.setText(String.valueOf(srNo));
+        cellA.setTextSize(14);
+        cellA.setTextColor(Color.BLACK);
+        cellA.setGravity(Gravity.CENTER);
+        cellA.setPadding(dpToPx(1), dpToPx(1), dpToPx(1), dpToPx(1));
+        cellA.setBackgroundResource(R.drawable.excel_border_thin);
         cellA.setTag("cellA");
+        LinearLayout.LayoutParams paramsA = new LinearLayout.LayoutParams(
+            dpToPx(COLUMN_WIDTHS[0]),
+            LinearLayout.LayoutParams.MATCH_PARENT
+        );
+        cellA.setLayoutParams(paramsA);
         row.addView(cellA);
         
-        // Columns B-I: Editable cells
-        for (int col = 1; col < TOTAL_COLUMNS; col++) {
-            EditText cell = createEditCell("", COLUMN_WIDTHS[col]);
-            cell.setTag("cell" + (char)('A' + col));
-            row.addView(cell);
-        }
+        // Column B: BANK NAME (left align)
+        row.addView(createEditCell("", COLUMN_WIDTHS[1], "cellB", Gravity.START | Gravity.CENTER_VERTICAL, 14));
+        
+        // Column C: APPLICANT NAME (left align)
+        row.addView(createEditCell("", COLUMN_WIDTHS[2], "cellC", Gravity.START | Gravity.CENTER_VERTICAL, 14));
+        
+        // Column D: STATUS (center)
+        row.addView(createEditCell("", COLUMN_WIDTHS[3], "cellD", Gravity.CENTER, 14));
+        
+        // Column E: REASON FOR CNV (left align, smaller font)
+        row.addView(createEditCell("", COLUMN_WIDTHS[4], "cellE", Gravity.START | Gravity.CENTER_VERTICAL, 12));
+        
+        // Column F: LATLONG FROM (left align, smaller font)
+        row.addView(createEditCell("", COLUMN_WIDTHS[5], "cellF", Gravity.START | Gravity.CENTER_VERTICAL, 12));
+        
+        // Column G: LATLONG TO (left align, smaller font)
+        row.addView(createEditCell("", COLUMN_WIDTHS[6], "cellG", Gravity.START | Gravity.CENTER_VERTICAL, 12));
+        
+        // Column H: AREA (left align)
+        row.addView(createEditCell("", COLUMN_WIDTHS[7], "cellH", Gravity.START | Gravity.CENTER_VERTICAL, 14));
+        
+        // Column I: KM (right align, number input)
+        EditText cellI = createEditCell("", COLUMN_WIDTHS[8], "cellI", Gravity.END | Gravity.CENTER_VERTICAL, 14);
+        cellI.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        row.addView(cellI);
         
         // Row click handler
         final int rowIndexFinal = srNo - 1;
@@ -193,33 +220,16 @@ public class MainActivity extends Activity {
         return row;
     }
     
-    private TextView createTextCell(String text, int widthDp, boolean isCenter) {
-        TextView tv = new TextView(this);
-        tv.setText(text);
-        tv.setTextSize(9);
-        tv.setTextColor(Color.BLACK);
-        tv.setGravity(isCenter ? Gravity.CENTER : (Gravity.CENTER_VERTICAL | Gravity.START));
-        tv.setPadding(dpToPx(4), dpToPx(2), dpToPx(4), dpToPx(2));
-        tv.setBackgroundResource(R.drawable.excel_cell_border);
-        
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-            dpToPx(widthDp),
-            LinearLayout.LayoutParams.MATCH_PARENT
-        );
-        tv.setLayoutParams(params);
-        
-        return tv;
-    }
-    
-    private EditText createEditCell(String text, int widthDp) {
+    private EditText createEditCell(String text, int widthDp, String tag, int gravity, int textSizeSp) {
         EditText et = new EditText(this);
         et.setText(text);
-        et.setTextSize(9);
+        et.setTextSize(textSizeSp);
         et.setTextColor(Color.BLACK);
-        et.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
-        et.setPadding(dpToPx(4), dpToPx(2), dpToPx(4), dpToPx(2));
-        et.setBackgroundResource(R.drawable.excel_cell_border);
+        et.setGravity(gravity);
+        et.setPadding(dpToPx(2), dpToPx(1), dpToPx(2), dpToPx(1));
+        et.setBackgroundResource(R.drawable.excel_border_thin);
         et.setSingleLine(true);
+        et.setTag(tag);
         
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
             dpToPx(widthDp),
@@ -236,19 +246,21 @@ public class MainActivity extends Activity {
     }
     
     private void updateMonthYearButtons() {
-        btnSelectMonth.setText(currentMonth);
+        // Show short month name
+        String shortMonth = currentMonth.substring(0, 3);
+        btnSelectMonth.setText(shortMonth);
         btnSelectYear.setText(currentYear);
         updateCurrentDateDisplay();
     }
     
     private void updateCurrentDateDisplay() {
         if (currentDateFull.isEmpty()) {
-            tvCurrentDate.setText("No entries yet");
+            tvCurrentDate.setText(currentMonth + " " + currentYear);
         } else {
             tvCurrentDate.setText(currentDateFull);
         }
         
-        // Count entries for current date
+        // Count entries for current month/year
         ArrayList<DatabaseHelper.EntryData> entries = dbHelper.getEntriesByMonthYear(currentMonth, currentYear);
         tvEntryCount.setText(entries.size() + " Entries");
     }
@@ -279,20 +291,6 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 openHistoryPage();
-            }
-        });
-        
-        btnCopyAll.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                copyAllFilledRows();
-            }
-        });
-        
-        btnClearTable.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                confirmClearTable();
             }
         });
     }
@@ -349,9 +347,9 @@ public class MainActivity extends Activity {
         }
         
         // Fill data rows with database entries
-        for (int i = 0; i < entries.size() && i < dataRows.size(); i++) {
+        for (int i = 0; i < entries.size() && i < allDataRows.size(); i++) {
             DatabaseHelper.EntryData entry = entries.get(i);
-            fillRowWithEntry(dataRows.get(i), entry, i);
+            fillRowWithEntry(allDataRows.get(i), entry, i);
         }
         
         updateCurrentDateDisplay();
@@ -359,7 +357,7 @@ public class MainActivity extends Activity {
     }
     
     private void clearAllDataRows() {
-        for (LinearLayout row : dataRows) {
+        for (LinearLayout row : allDataRows) {
             for (int col = 1; col < TOTAL_COLUMNS; col++) {
                 EditText cell = (EditText) row.findViewWithTag("cell" + (char)('A' + col));
                 if (cell != null) {
@@ -395,34 +393,29 @@ public class MainActivity extends Activity {
     
     private void selectRow(int rowIndex) {
         // Deselect previous row
-        if (selectedRowIndex != -1 && selectedRowIndex < dataRows.size()) {
-            setRowBackground(dataRows.get(selectedRowIndex), R.drawable.excel_cell_border);
+        if (selectedRowIndex != -1 && selectedRowIndex < allDataRows.size()) {
+            setRowBackground(allDataRows.get(selectedRowIndex), R.drawable.excel_border_thin);
         }
         
         // Select new row
         selectedRowIndex = rowIndex;
-        if (rowIndex < dataRows.size()) {
-            setRowBackground(dataRows.get(rowIndex), R.drawable.excel_cell_selected);
+        if (rowIndex < allDataRows.size()) {
+            setRowBackground(allDataRows.get(rowIndex), R.drawable.excel_cell_selected);
         }
     }
     
     private void setRowBackground(LinearLayout row, int backgroundRes) {
-        for (int col = 0; col < TOTAL_COLUMNS; col++) {
-            View cell = row.findViewWithTag("cell" + (char)('A' + col));
+        for (int col = 0; col < row.getChildCount(); col++) {
+            View cell = row.getChildAt(col);
             if (cell != null) {
                 cell.setBackgroundResource(backgroundRes);
             }
         }
-        // Also update SR NO cell (TextView)
-        View cellA = row.findViewWithTag("cellA");
-        if (cellA != null) {
-            cellA.setBackgroundResource(backgroundRes);
-        }
     }
     
     private void copyRowToClipboard(int rowIndex) {
-        if (rowIndex >= dataRows.size()) return;
-        LinearLayout row = dataRows.get(rowIndex);
+        if (rowIndex >= allDataRows.size()) return;
+        LinearLayout row = allDataRows.get(rowIndex);
         StringBuilder rowData = new StringBuilder();
         
         // Get SR NO
@@ -451,7 +444,7 @@ public class MainActivity extends Activity {
         if (floatingButtonEnabled) {
             stopService(new Intent(this, FloatingButtonService.class));
             floatingButtonEnabled = false;
-            btnToggleFloating.setText("ENABLE");
+            btnToggleFloating.setText("Enable");
             btnToggleFloating.setBackgroundResource(R.drawable.btn_success_bg);
             showToast("Quick Entry disabled", true);
         } else {
@@ -468,7 +461,7 @@ public class MainActivity extends Activity {
             
             startService(new Intent(this, FloatingButtonService.class));
             floatingButtonEnabled = true;
-            btnToggleFloating.setText("DISABLE");
+            btnToggleFloating.setText("Disable");
             btnToggleFloating.setBackgroundResource(R.drawable.btn_danger_bg);
             showToast("Quick Entry ON! Minimize app.", true);
         }
@@ -494,6 +487,115 @@ public class MainActivity extends Activity {
         }
     }
     
+    private void calculateTotals() {
+        // Calculate total KM from data rows
+        double totalKm = 0;
+        for (LinearLayout row : allDataRows) {
+            EditText kmCell = (EditText) row.findViewWithTag("cellI");
+            if (kmCell != null) {
+                String kmText = kmCell.getText().toString().trim();
+                if (!kmText.isEmpty()) {
+                    try {
+                        totalKm += Double.parseDouble(kmText);
+                    } catch (NumberFormatException e) {
+                        // Skip invalid numbers
+                    }
+                }
+            }
+        }
+        
+        // Auto-fill total KM count
+        if (cellTotalKmCount != null) {
+            cellTotalKmCount.setText(totalKm > 0 ? String.valueOf((int) totalKm) : "");
+        }
+        
+        // Calculate total amount
+        calculateTotalAmount();
+    }
+    
+    private void calculateTotalAmount() {
+        double total = 0;
+        
+        try {
+            if (cellTotalKmAmount != null) {
+                String val = cellTotalKmAmount.getText().toString().trim();
+                if (!val.isEmpty()) total += Double.parseDouble(val);
+            }
+            
+            if (cellLunchAmount != null) {
+                String val = cellLunchAmount.getText().toString().trim();
+                if (!val.isEmpty()) total += Double.parseDouble(val);
+            }
+            
+            if (cellVisitAmount != null) {
+                String val = cellVisitAmount.getText().toString().trim();
+                if (!val.isEmpty()) total += Double.parseDouble(val);
+            }
+            
+            if (cellOtherAmount != null) {
+                String val = cellOtherAmount.getText().toString().trim();
+                if (!val.isEmpty()) total += Double.parseDouble(val);
+            }
+        } catch (NumberFormatException e) {
+            // Skip invalid numbers
+        }
+        
+        if (cellFinalTotal != null) {
+            if (total > 0) {
+                cellFinalTotal.setText(String.format("%.2f", total));
+            } else {
+                cellFinalTotal.setText("");
+            }
+        }
+    }
+    
+    private void showRowOptionsDialog(final int rowIndex) {
+        final CharSequence[] options = {"Copy Row", "Delete Row", "Copy All Data"};
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("ROW OPTIONS");
+        builder.setItems(options, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                switch (which) {
+                    case 0:
+                        copyRowToClipboard(rowIndex);
+                        break;
+                    case 1:
+                        deleteRow(rowIndex);
+                        break;
+                    case 2:
+                        copyAllFilledRows();
+                        break;
+                }
+            }
+        });
+        builder.show();
+    }
+    
+    private void deleteRow(final int rowIndex) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("DELETE ROW?");
+        builder.setMessage("Are you sure you want to delete this row?");
+        builder.setPositiveButton("Delete", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                if (rowIndex < allDataRows.size()) {
+                    LinearLayout row = allDataRows.get(rowIndex);
+                    Object tag = row.getTag();
+                    if (tag != null) {
+                        long entryId = (long) tag;
+                        dbHelper.deleteEntry(entryId);
+                    }
+                    loadTableFromDatabase();
+                    showToast("Row deleted!", true);
+                }
+            }
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+    
     private void copyAllFilledRows() {
         StringBuilder allData = new StringBuilder();
         int filledRowCount = 0;
@@ -514,8 +616,8 @@ public class MainActivity extends Activity {
         allData.append("\n");
         
         // Add data rows
-        for (int i = 0; i < dataRows.size(); i++) {
-            LinearLayout row = dataRows.get(i);
+        for (int i = 0; i < allDataRows.size(); i++) {
+            LinearLayout row = allDataRows.get(i);
             StringBuilder rowData = new StringBuilder();
             boolean hasData = false;
             
@@ -548,11 +650,22 @@ public class MainActivity extends Activity {
         // Add summary section
         allData.append("\n");
         allData.append("\t\t\t\t\t\tNO. OF COUNT\tAMOUNT\n");
-        allData.append("\t\t\t\t\tTOTAL KM\t").append(cellG20.getText().toString()).append("\t").append(cellH20.getText().toString()).append("\n");
-        allData.append("\t\t\t\t\tLUNCH\t").append(cellG21.getText().toString()).append("\t").append(cellH21.getText().toString()).append("\n");
-        allData.append("\t\t\t\t\tVISIT\t").append(cellG22.getText().toString()).append("\t").append(cellH22.getText().toString()).append("\n");
-        allData.append("\t\t\t\t\tOTHER\t").append(cellG23.getText().toString()).append("\t").append(cellH23.getText().toString()).append("\n");
-        allData.append("\t\t\t\t\tTOTAL AMOUNT\t\t").append(cellH24.getText().toString()).append("\n");
+        
+        String totalKmCount = cellTotalKmCount != null ? cellTotalKmCount.getText().toString() : "";
+        String totalKmAmount = cellTotalKmAmount != null ? cellTotalKmAmount.getText().toString() : "";
+        String lunchCount = cellLunchCount != null ? cellLunchCount.getText().toString() : "";
+        String lunchAmount = cellLunchAmount != null ? cellLunchAmount.getText().toString() : "";
+        String visitCount = cellVisitCount != null ? cellVisitCount.getText().toString() : "";
+        String visitAmount = cellVisitAmount != null ? cellVisitAmount.getText().toString() : "";
+        String otherCount = cellOtherCount != null ? cellOtherCount.getText().toString() : "";
+        String otherAmount = cellOtherAmount != null ? cellOtherAmount.getText().toString() : "";
+        String finalTotal = cellFinalTotal != null ? cellFinalTotal.getText().toString() : "";
+        
+        allData.append("\t\t\t\t\tTOTAL KM\t").append(totalKmCount).append("\t").append(totalKmAmount).append("\n");
+        allData.append("\t\t\t\t\tLUNCH\t").append(lunchCount).append("\t").append(lunchAmount).append("\n");
+        allData.append("\t\t\t\t\tVISIT\t").append(visitCount).append("\t").append(visitAmount).append("\n");
+        allData.append("\t\t\t\t\tOTHER\t").append(otherCount).append("\t").append(otherAmount).append("\n");
+        allData.append("\t\t\t\t\tTOTAL AMOUNT\t\t").append(finalTotal).append("\n");
         
         if (filledRowCount == 0) {
             showToast("No data to copy!", false);
@@ -564,133 +677,6 @@ public class MainActivity extends Activity {
         clipboard.setPrimaryClip(clip);
         
         showToast(filledRowCount + " rows copied with summary!", true);
-    }
-    
-    private void confirmClearTable() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("CLEAR TABLE?");
-        builder.setMessage("This will delete all entries for " + currentMonth + " " + currentYear + ". This cannot be undone.");
-        builder.setPositiveButton("DELETE ALL", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                // Delete entries for current month/year
-                ArrayList<DatabaseHelper.EntryData> entries = dbHelper.getEntriesByMonthYear(currentMonth, currentYear);
-                for (DatabaseHelper.EntryData entry : entries) {
-                    dbHelper.deleteEntry(entry.id);
-                }
-                loadTableFromDatabase();
-                clearSummaryFields();
-                showToast("Table cleared!", true);
-            }
-        });
-        builder.setNegativeButton("Cancel", null);
-        builder.show();
-    }
-    
-    private void clearSummaryFields() {
-        cellG20.setText("");
-        cellH20.setText("");
-        cellG21.setText("");
-        cellH21.setText("");
-        cellG22.setText("");
-        cellH22.setText("");
-        cellG23.setText("");
-        cellH23.setText("");
-        cellH24.setText("");
-    }
-    
-    private void calculateTotals() {
-        // Calculate total KM from data rows
-        double totalKm = 0;
-        for (LinearLayout row : dataRows) {
-            EditText kmCell = (EditText) row.findViewWithTag("cellI");
-            if (kmCell != null) {
-                String kmText = kmCell.getText().toString().trim();
-                if (!kmText.isEmpty()) {
-                    try {
-                        totalKm += Double.parseDouble(kmText);
-                    } catch (NumberFormatException e) {
-                        // Skip invalid numbers
-                    }
-                }
-            }
-        }
-        
-        // Auto-fill total KM count
-        cellG20.setText(String.valueOf((int) totalKm));
-        
-        // Calculate total amount
-        calculateTotalAmount();
-    }
-    
-    private void calculateTotalAmount() {
-        double total = 0;
-        
-        try {
-            String h20 = cellH20.getText().toString().trim();
-            if (!h20.isEmpty()) total += Double.parseDouble(h20);
-            
-            String h21 = cellH21.getText().toString().trim();
-            if (!h21.isEmpty()) total += Double.parseDouble(h21);
-            
-            String h22 = cellH22.getText().toString().trim();
-            if (!h22.isEmpty()) total += Double.parseDouble(h22);
-            
-            String h23 = cellH23.getText().toString().trim();
-            if (!h23.isEmpty()) total += Double.parseDouble(h23);
-        } catch (NumberFormatException e) {
-            // Skip invalid numbers
-        }
-        
-        if (total > 0) {
-            cellH24.setText(String.format("%.2f", total));
-        } else {
-            cellH24.setText("");
-        }
-    }
-    
-    private void showRowOptionsDialog(final int rowIndex) {
-        final CharSequence[] options = {"Delete Row", "Copy Row"};
-        
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("ROW OPTIONS");
-        builder.setItems(options, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                switch (which) {
-                    case 0:
-                        deleteRow(rowIndex);
-                        break;
-                    case 1:
-                        copyRowToClipboard(rowIndex);
-                        break;
-                }
-            }
-        });
-        builder.show();
-    }
-    
-    private void deleteRow(final int rowIndex) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("DELETE ROW?");
-        builder.setMessage("Are you sure you want to delete this row?");
-        builder.setPositiveButton("Delete", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                if (rowIndex < dataRows.size()) {
-                    LinearLayout row = dataRows.get(rowIndex);
-                    Object tag = row.getTag();
-                    if (tag != null) {
-                        long entryId = (long) tag;
-                        dbHelper.deleteEntry(entryId);
-                    }
-                    loadTableFromDatabase();
-                    showToast("Row deleted!", true);
-                }
-            }
-        });
-        builder.setNegativeButton("Cancel", null);
-        builder.show();
     }
     
     private void showToast(String message, boolean isSuccess) {
