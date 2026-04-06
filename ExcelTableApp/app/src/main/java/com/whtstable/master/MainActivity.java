@@ -26,6 +26,9 @@ import android.graphics.drawable.LayerDrawable;
 import android.view.MotionEvent;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.ViewGroup;
+import android.widget.HorizontalScrollView;
+import android.widget.ScrollView;
 
 import java.util.ArrayList;
 
@@ -33,7 +36,8 @@ public class MainActivity extends Activity {
     
     // Excel Column Widths (in dp) - matching Excel proportions
     // A=34dp, B=62dp, C=200dp (40.0), D=30dp, E=45dp, F=92dp, G=95dp, H=89dp, I=38dp
-    private static final int[] COLUMN_WIDTHS = {34, 62, 200, 30, 45, 92, 95, 89, 38};
+    // Now managed by ResizeManager for dynamic resizing
+    private int[] COLUMN_WIDTHS = {34, 62, 200, 30, 45, 92, 95, 89, 38};
     private static final int DATA_ROW_HEIGHT = 21;       // All 15 rows height (20.25 ~ 21dp)
     private static final int TOTAL_COLUMNS = 9;
     private static final int TOTAL_DATA_ROWS = 15;       // Row 3-17 (15 data rows total)
@@ -86,6 +90,35 @@ public class MainActivity extends Activity {
     private boolean isColumnHeaderDragging = false;
     private int columnDragStartCol = -1;
     
+    // ==================== RESIZE SYSTEM VARIABLES ====================
+    private ResizeManager resizeManager;
+    
+    // Column resize state
+    private boolean isResizingColumn = false;
+    private int resizingColumnIndex = -1;
+    private float resizeStartX = 0;
+    private int resizeInitialWidth = 0;
+    private View columnResizeIndicator;
+    
+    // Row resize state
+    private boolean isResizingRow = false;
+    private int resizingRowIndex = -1;
+    private float resizeStartY = 0;
+    private int resizeInitialHeight = 0;
+    private View rowResizeIndicator;
+    
+    // Resize touch area in dp
+    private static final int COLUMN_RESIZE_TOUCH_AREA = 20; // Right edge touch area
+    private static final int ROW_RESIZE_TOUCH_AREA = 12;    // Bottom edge touch area
+    
+    // Double tap detection for auto-fit
+    private long lastColumnHeaderTapTime = 0;
+    private int lastTappedColumnIndex = -1;
+    private static final long DOUBLE_TAP_TIMEOUT = 300; // ms
+    
+    // Row 2 Headers reference for resize
+    private LinearLayout row2HeadersLayout;
+    
     // Data rows storage
     private ArrayList<LinearLayout> allDataRows;
     private int selectedRowIndex = -1;
@@ -123,12 +156,19 @@ public class MainActivity extends Activity {
         selectionManager = CellSelectionManager.getInstance();
         setupSelectionListener();
         
+        // Initialize Resize Manager
+        resizeManager = ResizeManager.getInstance(this);
+        setupResizeListener();
+        
         // Load saved month/year
         currentMonth = dbHelper.getSelectedMonth();
         currentYear = dbHelper.getSelectedYear();
         
         // Set border manager context
         borderManager.setCurrentMonthYear(currentMonth, currentYear);
+        
+        // Set resize manager context
+        resizeManager.setCurrentMonthYear(currentMonth, currentYear);
         
         // Initialize views
         initializeViews();
@@ -185,6 +225,9 @@ public class MainActivity extends Activity {
         borderPanelContainer = findViewById(R.id.borderPanelContainer);
         
         allDataRows = new ArrayList<LinearLayout>();
+        
+        // Get row2Headers reference for resize
+        row2HeadersLayout = (LinearLayout) findViewById(R.id.row2Headers);
         
         // Setup header row 1 cells (Field Executive Name, Date)
         setupHeaderRow1Selection();
@@ -376,19 +419,33 @@ public class MainActivity extends Activity {
      * LONG PRESS = Column selection mode (drag for multi-column)
      */
     private void setupColumnHeaderSelection() {
-        // Find the row2Headers (column header row)
-        final LinearLayout row2Headers = (LinearLayout) findViewById(R.id.row2Headers);
-        if (row2Headers == null) return;
+        // Use row2HeadersLayout (column header row) - already initialized in initializeViews
+        if (row2HeadersLayout == null) return;
         
         // Add touch listeners to each column header
-        for (int i = 0; i < row2Headers.getChildCount(); i++) {
+        for (int i = 0; i < row2HeadersLayout.getChildCount(); i++) {
             final int colIndex = i;
-            final View header = row2Headers.getChildAt(i);
+            final View header = row2HeadersLayout.getChildAt(i);
             
-            // SINGLE TAP = Edit header (if editable)
+            // SINGLE TAP = Edit header (if editable) / DOUBLE TAP on edge = Auto-fit
             header.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    long currentTime = System.currentTimeMillis();
+                    
+                    // Check for double tap on resize edge for auto-fit
+                    if (lastTappedColumnIndex == colIndex && 
+                        (currentTime - lastColumnHeaderTapTime) < DOUBLE_TAP_TIMEOUT) {
+                        // Double tap detected - auto-fit column
+                        autoFitColumnWidth(colIndex);
+                        lastColumnHeaderTapTime = 0;
+                        lastTappedColumnIndex = -1;
+                        return;
+                    }
+                    
+                    lastColumnHeaderTapTime = currentTime;
+                    lastTappedColumnIndex = colIndex;
+                    
                     // Clear selection
                     selectionManager.clearSelection();
                     
@@ -414,10 +471,11 @@ public class MainActivity extends Activity {
                 }
             });
             
-            // Touch listener for drag after long press
+            // Touch listener for drag after long press AND column resize
             header.setOnTouchListener(new View.OnTouchListener() {
                 private float startX;
                 private boolean longPressTriggered = false;
+                private boolean checkingForResize = false;
                 
                 @Override
                 public boolean onTouch(View v, MotionEvent event) {
@@ -425,9 +483,37 @@ public class MainActivity extends Activity {
                         case MotionEvent.ACTION_DOWN:
                             startX = event.getRawX();
                             longPressTriggered = false;
+                            checkingForResize = false;
+                            
+                            // Check if touch is on resize handle (right edge)
+                            float localX = event.getX();
+                            int headerWidth = header.getWidth();
+                            int resizeTouchArea = dpToPx(COLUMN_RESIZE_TOUCH_AREA);
+                            
+                            if (resizeManager.isOnColumnResizeHandle(localX, headerWidth, resizeTouchArea)) {
+                                // Start column resize
+                                checkingForResize = true;
+                                return true; // Consume touch for resize
+                            }
+                            
                             return false; // Let click/long click handle initial touch
                             
                         case MotionEvent.ACTION_MOVE:
+                            // Handle column resize
+                            if (checkingForResize && !isResizingColumn) {
+                                float dx = Math.abs(event.getRawX() - startX);
+                                if (dx > dpToPx(5)) {
+                                    // Start resize mode
+                                    startColumnResize(colIndex, startX);
+                                }
+                                return true;
+                            }
+                            
+                            if (isResizingColumn && resizingColumnIndex == colIndex) {
+                                updateColumnResize(event.getRawX());
+                                return true;
+                            }
+                            
                             // Only handle move if we're in selection mode
                             if (selectionManager.isSelecting() && selectionManager.getSelectionMode() == CellSelectionManager.MODE_COLUMN) {
                                 float dx = Math.abs(event.getRawX() - startX);
@@ -436,7 +522,7 @@ public class MainActivity extends Activity {
                                 }
                                 
                                 if (isColumnHeaderDragging) {
-                                    int newCol = getColumnFromX(row2Headers, event.getRawX());
+                                    int newCol = getColumnFromX(row2HeadersLayout, event.getRawX());
                                     if (newCol >= 0) {
                                         selectionManager.updateColumnDrag(newCol);
                                     }
@@ -447,6 +533,14 @@ public class MainActivity extends Activity {
                             
                         case MotionEvent.ACTION_UP:
                         case MotionEvent.ACTION_CANCEL:
+                            if (isResizingColumn) {
+                                endColumnResize();
+                                checkingForResize = false;
+                                return true;
+                            }
+                            
+                            checkingForResize = false;
+                            
                             if (isColumnHeaderDragging) {
                                 selectionManager.endDragSelection();
                                 int colCount = selectionManager.getSelectedColumnCount();
@@ -894,11 +988,19 @@ public class MainActivity extends Activity {
         dataRowsContainer.removeAllViews();
         allDataRows.clear();
         
-        // Create all 15 data rows (Row 3-17) with same height (21dp ~ 20.25)
+        // Get current column widths from ResizeManager
+        if (resizeManager != null) {
+            COLUMN_WIDTHS = resizeManager.getAllColumnWidths();
+        }
+        
+        // Create all 15 data rows (Row 3-17) with height from ResizeManager
         // Last row (row 15) will have thick bottom border
         for (int rowIndex = 0; rowIndex < TOTAL_DATA_ROWS; rowIndex++) {
             boolean isLastRow = (rowIndex == TOTAL_DATA_ROWS - 1);
-            LinearLayout row = createExcelRow(rowIndex + 1, DATA_ROW_HEIGHT, isLastRow);
+            // Get row height from ResizeManager or use default
+            int rowHeight = (resizeManager != null) ? 
+                resizeManager.getRowHeight(rowIndex) : DATA_ROW_HEIGHT;
+            LinearLayout row = createExcelRow(rowIndex + 1, rowHeight, isLastRow);
             allDataRows.add(row);
             dataRowsContainer.addView(row);
         }
@@ -1016,6 +1118,7 @@ public class MainActivity extends Activity {
             private boolean isLongPressed = false;
             private boolean isTappedOnRowHeader = false;
             private long touchDownTime = 0;
+            private boolean checkingForRowResize = false;
             
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -1026,6 +1129,17 @@ public class MainActivity extends Activity {
                         isLongPressed = false;
                         isRowHeaderDragging = false;
                         touchDownTime = System.currentTimeMillis();
+                        checkingForRowResize = false;
+                        
+                        // Check if touch is on row resize handle (bottom edge)
+                        float localY = event.getY();
+                        int rowHeight = row.getHeight();
+                        int resizeTouchArea = dpToPx(ROW_RESIZE_TOUCH_AREA);
+                        
+                        if (resizeManager.isOnRowResizeHandle(localY, rowHeight, resizeTouchArea)) {
+                            // Potential row resize
+                            checkingForRowResize = true;
+                        }
                         
                         // Get cell position from touch
                         int[] pos = getCellPositionFromTouch(row, event.getX());
@@ -1067,6 +1181,21 @@ public class MainActivity extends Activity {
                         float dx = Math.abs(event.getRawX() - startX);
                         float dy = Math.abs(event.getRawY() - startY);
                         
+                        // Handle row resize
+                        if (checkingForRowResize && !isResizingRow) {
+                            if (dy > dpToPx(5)) {
+                                // Start row resize mode
+                                startRowResize(rowIndex, startY);
+                                longPressHandler.removeCallbacks(longPressRunnable);
+                                return true;
+                            }
+                        }
+                        
+                        if (isResizingRow && resizingRowIndex == rowIndex) {
+                            updateRowResize(event.getRawY());
+                            return true;
+                        }
+                        
                         // If moved before long press, cancel long press (user is scrolling)
                         if (!isLongPressed && (dx > dpToPx(15) || dy > dpToPx(15))) {
                             longPressHandler.removeCallbacks(longPressRunnable);
@@ -1098,6 +1227,14 @@ public class MainActivity extends Activity {
                         
                     case MotionEvent.ACTION_UP:
                         longPressHandler.removeCallbacks(longPressRunnable);
+                        
+                        // End row resize if active
+                        if (isResizingRow) {
+                            endRowResize();
+                            checkingForRowResize = false;
+                            return true;
+                        }
+                        checkingForRowResize = false;
                         
                         long touchDuration = System.currentTimeMillis() - touchDownTime;
                         float totalDx = Math.abs(event.getRawX() - startX);
@@ -1233,6 +1370,7 @@ public class MainActivity extends Activity {
                 currentMonth = months[which];
                 dbHelper.setSelectedMonth(currentMonth);
                 borderManager.setCurrentMonthYear(currentMonth, currentYear);
+                resizeManager.setCurrentMonthYear(currentMonth, currentYear);
                 updateMonthYearButtons();
                 loadTableFromDatabase();
                 applyBordersToAllCells();
@@ -1251,6 +1389,7 @@ public class MainActivity extends Activity {
                 currentYear = years[which];
                 dbHelper.setSelectedYear(currentYear);
                 borderManager.setCurrentMonthYear(currentMonth, currentYear);
+                resizeManager.setCurrentMonthYear(currentMonth, currentYear);
                 updateMonthYearButtons();
                 loadTableFromDatabase();
                 applyBordersToAllCells();
@@ -1290,6 +1429,9 @@ public class MainActivity extends Activity {
         
         updateCurrentDateDisplay();
         calculateTotals();
+        
+        // Apply saved resize values
+        applySavedResizeValues();
     }
     
     private void clearAllDataRows() {
@@ -1835,5 +1977,415 @@ public class MainActivity extends Activity {
             int defaultBorder = isLastRow ? R.drawable.excel_data_last_row : R.drawable.excel_data_thin;
             cell.setBackgroundResource(defaultBorder);
         }
+    }
+    
+    // ==================== RESIZE SYSTEM METHODS ====================
+    
+    /**
+     * Setup resize change listener to update UI when resize happens
+     */
+    private void setupResizeListener() {
+        resizeManager.setResizeChangeListener(new ResizeManager.ResizeChangeListener() {
+            @Override
+            public void onColumnWidthChanged(int colIndex, int newWidth) {
+                applyColumnWidthToAll(colIndex, newWidth);
+            }
+            
+            @Override
+            public void onRowHeightChanged(int rowIndex, int newHeight) {
+                applyRowHeight(rowIndex, newHeight);
+            }
+            
+            @Override
+            public void onResizeComplete() {
+                // Refresh entire table layout
+                refreshAllColumnWidths();
+                refreshAllRowHeights();
+            }
+        });
+    }
+    
+    /**
+     * Start column resize operation
+     */
+    private void startColumnResize(int colIndex, float startX) {
+        isResizingColumn = true;
+        resizingColumnIndex = colIndex;
+        resizeStartX = startX;
+        resizeInitialWidth = resizeManager.getColumnWidth(colIndex);
+        
+        // Show visual feedback
+        showColumnResizeIndicator(colIndex);
+        
+        // Clear any selection
+        selectionManager.clearSelection();
+        
+        showToast("Resizing Column " + (char)('A' + colIndex), true);
+    }
+    
+    /**
+     * Update column resize during drag
+     */
+    private void updateColumnResize(float currentX) {
+        if (!isResizingColumn || resizingColumnIndex < 0) return;
+        
+        int newWidth = resizeManager.calculateNewColumnWidth(
+            resizingColumnIndex, resizeStartX, currentX, resizeInitialWidth);
+        
+        // Live update column width
+        applyColumnWidthToAll(resizingColumnIndex, newWidth);
+        
+        // Update resize indicator position
+        updateColumnResizeIndicator(currentX);
+    }
+    
+    /**
+     * End column resize operation
+     */
+    private void endColumnResize() {
+        if (!isResizingColumn || resizingColumnIndex < 0) return;
+        
+        // Calculate final width
+        // Note: The actual width was already applied during updateColumnResize
+        // Now we just need to save it
+        int currentWidth = getCurrentColumnWidth(resizingColumnIndex);
+        resizeManager.setColumnWidth(resizingColumnIndex, currentWidth);
+        
+        hideColumnResizeIndicator();
+        
+        showToast("Column " + (char)('A' + resizingColumnIndex) + " width: " + currentWidth + "dp", true);
+        
+        isResizingColumn = false;
+        resizingColumnIndex = -1;
+        resizeStartX = 0;
+        resizeInitialWidth = 0;
+    }
+    
+    /**
+     * Start row resize operation
+     */
+    private void startRowResize(int rowIndex, float startY) {
+        isResizingRow = true;
+        resizingRowIndex = rowIndex;
+        resizeStartY = startY;
+        resizeInitialHeight = resizeManager.getRowHeight(rowIndex);
+        
+        // Show visual feedback
+        showRowResizeIndicator(rowIndex);
+        
+        // Clear any selection
+        selectionManager.clearSelection();
+        
+        showToast("Resizing Row " + (rowIndex + 1), true);
+    }
+    
+    /**
+     * Update row resize during drag
+     */
+    private void updateRowResize(float currentY) {
+        if (!isResizingRow || resizingRowIndex < 0) return;
+        
+        int newHeight = resizeManager.calculateNewRowHeight(
+            resizingRowIndex, resizeStartY, currentY, resizeInitialHeight);
+        
+        // Live update row height
+        applyRowHeight(resizingRowIndex, newHeight);
+        
+        // Update resize indicator position
+        updateRowResizeIndicator(currentY);
+    }
+    
+    /**
+     * End row resize operation
+     */
+    private void endRowResize() {
+        if (!isResizingRow || resizingRowIndex < 0) return;
+        
+        // Calculate final height
+        int currentHeight = getCurrentRowHeight(resizingRowIndex);
+        resizeManager.setRowHeight(resizingRowIndex, currentHeight);
+        
+        hideRowResizeIndicator();
+        
+        showToast("Row " + (resizingRowIndex + 1) + " height: " + currentHeight + "dp", true);
+        
+        isResizingRow = false;
+        resizingRowIndex = -1;
+        resizeStartY = 0;
+        resizeInitialHeight = 0;
+    }
+    
+    /**
+     * Apply column width to all cells in that column (header + data + summary)
+     */
+    private void applyColumnWidthToAll(int colIndex, int widthDp) {
+        int widthPx = dpToPx(widthDp);
+        
+        // Update header row 2 (column headers)
+        if (row2HeadersLayout != null && colIndex < row2HeadersLayout.getChildCount()) {
+            View headerCell = row2HeadersLayout.getChildAt(colIndex);
+            if (headerCell != null) {
+                ViewGroup.LayoutParams params = headerCell.getLayoutParams();
+                params.width = widthPx;
+                headerCell.setLayoutParams(params);
+            }
+        }
+        
+        // Update all data rows
+        for (LinearLayout row : allDataRows) {
+            if (colIndex < row.getChildCount()) {
+                View cell = row.getChildAt(colIndex);
+                if (cell != null) {
+                    ViewGroup.LayoutParams params = cell.getLayoutParams();
+                    params.width = widthPx;
+                    cell.setLayoutParams(params);
+                }
+            }
+        }
+        
+        // Update summary table if column is in summary range (columns 6-8 = G-I)
+        // Summary table has its own layout, skip for now or implement if needed
+    }
+    
+    /**
+     * Apply row height to a specific data row
+     */
+    private void applyRowHeight(int rowIndex, int heightDp) {
+        if (rowIndex < 0 || rowIndex >= allDataRows.size()) return;
+        
+        int heightPx = dpToPx(heightDp);
+        LinearLayout row = allDataRows.get(rowIndex);
+        
+        ViewGroup.LayoutParams params = row.getLayoutParams();
+        params.height = heightPx;
+        row.setLayoutParams(params);
+    }
+    
+    /**
+     * Get current column width in dp from actual view
+     */
+    private int getCurrentColumnWidth(int colIndex) {
+        if (row2HeadersLayout != null && colIndex < row2HeadersLayout.getChildCount()) {
+            View headerCell = row2HeadersLayout.getChildAt(colIndex);
+            if (headerCell != null) {
+                float density = getResources().getDisplayMetrics().density;
+                return Math.round(headerCell.getWidth() / density);
+            }
+        }
+        return resizeManager.getColumnWidth(colIndex);
+    }
+    
+    /**
+     * Get current row height in dp from actual view
+     */
+    private int getCurrentRowHeight(int rowIndex) {
+        if (rowIndex >= 0 && rowIndex < allDataRows.size()) {
+            LinearLayout row = allDataRows.get(rowIndex);
+            float density = getResources().getDisplayMetrics().density;
+            return Math.round(row.getHeight() / density);
+        }
+        return resizeManager.getRowHeight(rowIndex);
+    }
+    
+    /**
+     * Refresh all column widths from saved values
+     */
+    private void refreshAllColumnWidths() {
+        int[] widths = resizeManager.getAllColumnWidths();
+        for (int i = 0; i < widths.length; i++) {
+            applyColumnWidthToAll(i, widths[i]);
+        }
+    }
+    
+    /**
+     * Refresh all row heights from saved values
+     */
+    private void refreshAllRowHeights() {
+        int[] heights = resizeManager.getAllRowHeights();
+        for (int i = 0; i < heights.length; i++) {
+            applyRowHeight(i, heights[i]);
+        }
+    }
+    
+    // ==================== RESIZE INDICATOR METHODS ====================
+    
+    /**
+     * Show column resize indicator (vertical line)
+     */
+    private void showColumnResizeIndicator(int colIndex) {
+        if (columnResizeIndicator == null) {
+            columnResizeIndicator = new View(this);
+            columnResizeIndicator.setBackgroundResource(R.drawable.resize_indicator_active);
+        }
+        
+        // Add to root view if not already added
+        ViewGroup rootView = (ViewGroup) getWindow().getDecorView();
+        if (columnResizeIndicator.getParent() != null) {
+            ((ViewGroup) columnResizeIndicator.getParent()).removeView(columnResizeIndicator);
+        }
+        
+        android.widget.FrameLayout.LayoutParams params = new android.widget.FrameLayout.LayoutParams(
+            dpToPx(3), // 3dp wide
+            rootView.getHeight() // Full height
+        );
+        
+        // Position at column edge
+        if (row2HeadersLayout != null && colIndex < row2HeadersLayout.getChildCount()) {
+            View headerCell = row2HeadersLayout.getChildAt(colIndex);
+            int[] loc = new int[2];
+            headerCell.getLocationOnScreen(loc);
+            params.leftMargin = loc[0] + headerCell.getWidth();
+        }
+        
+        rootView.addView(columnResizeIndicator, params);
+        columnResizeIndicator.setVisibility(View.VISIBLE);
+    }
+    
+    /**
+     * Update column resize indicator position during drag
+     */
+    private void updateColumnResizeIndicator(float rawX) {
+        if (columnResizeIndicator != null && columnResizeIndicator.getParent() != null) {
+            android.widget.FrameLayout.LayoutParams params = 
+                (android.widget.FrameLayout.LayoutParams) columnResizeIndicator.getLayoutParams();
+            params.leftMargin = (int) rawX;
+            columnResizeIndicator.setLayoutParams(params);
+        }
+    }
+    
+    /**
+     * Hide column resize indicator
+     */
+    private void hideColumnResizeIndicator() {
+        if (columnResizeIndicator != null && columnResizeIndicator.getParent() != null) {
+            ((ViewGroup) columnResizeIndicator.getParent()).removeView(columnResizeIndicator);
+        }
+    }
+    
+    /**
+     * Show row resize indicator (horizontal line)
+     */
+    private void showRowResizeIndicator(int rowIndex) {
+        if (rowResizeIndicator == null) {
+            rowResizeIndicator = new View(this);
+            rowResizeIndicator.setBackgroundResource(R.drawable.resize_indicator_active);
+        }
+        
+        // Add to root view if not already added
+        ViewGroup rootView = (ViewGroup) getWindow().getDecorView();
+        if (rowResizeIndicator.getParent() != null) {
+            ((ViewGroup) rowResizeIndicator.getParent()).removeView(rowResizeIndicator);
+        }
+        
+        android.widget.FrameLayout.LayoutParams params = new android.widget.FrameLayout.LayoutParams(
+            rootView.getWidth(), // Full width
+            dpToPx(3) // 3dp tall
+        );
+        
+        // Position at row edge
+        if (rowIndex >= 0 && rowIndex < allDataRows.size()) {
+            LinearLayout row = allDataRows.get(rowIndex);
+            int[] loc = new int[2];
+            row.getLocationOnScreen(loc);
+            params.topMargin = loc[1] + row.getHeight();
+        }
+        
+        rootView.addView(rowResizeIndicator, params);
+        rowResizeIndicator.setVisibility(View.VISIBLE);
+    }
+    
+    /**
+     * Update row resize indicator position during drag
+     */
+    private void updateRowResizeIndicator(float rawY) {
+        if (rowResizeIndicator != null && rowResizeIndicator.getParent() != null) {
+            android.widget.FrameLayout.LayoutParams params = 
+                (android.widget.FrameLayout.LayoutParams) rowResizeIndicator.getLayoutParams();
+            params.topMargin = (int) rawY;
+            rowResizeIndicator.setLayoutParams(params);
+        }
+    }
+    
+    /**
+     * Hide row resize indicator
+     */
+    private void hideRowResizeIndicator() {
+        if (rowResizeIndicator != null && rowResizeIndicator.getParent() != null) {
+            ((ViewGroup) rowResizeIndicator.getParent()).removeView(rowResizeIndicator);
+        }
+    }
+    
+    /**
+     * Apply saved resize values when loading table
+     */
+    private void applySavedResizeValues() {
+        // Apply saved column widths
+        refreshAllColumnWidths();
+        
+        // Apply saved row heights
+        refreshAllRowHeights();
+    }
+    
+    /**
+     * Auto-fit column width based on content (Excel double-click feature)
+     */
+    private void autoFitColumnWidth(int colIndex) {
+        if (colIndex < 0 || colIndex >= TOTAL_COLUMNS) return;
+        
+        int maxWidth = ResizeManager.MIN_COLUMN_WIDTH;
+        float density = getResources().getDisplayMetrics().density;
+        
+        // Measure header text width
+        if (row2HeadersLayout != null && colIndex < row2HeadersLayout.getChildCount()) {
+            View headerCell = row2HeadersLayout.getChildAt(colIndex);
+            if (headerCell instanceof TextView) {
+                TextView tv = (TextView) headerCell;
+                android.text.TextPaint paint = tv.getPaint();
+                float textWidth = paint.measureText(tv.getText().toString());
+                int paddingWidth = tv.getPaddingLeft() + tv.getPaddingRight() + dpToPx(8);
+                int cellWidthDp = Math.round((textWidth + paddingWidth) / density);
+                maxWidth = Math.max(maxWidth, cellWidthDp);
+            }
+        }
+        
+        // Measure all data cells in this column
+        for (LinearLayout row : allDataRows) {
+            if (colIndex < row.getChildCount()) {
+                View cell = row.getChildAt(colIndex);
+                if (cell instanceof TextView) {
+                    TextView tv = (TextView) cell;
+                    String text = tv.getText().toString();
+                    if (!text.isEmpty()) {
+                        android.text.TextPaint paint = tv.getPaint();
+                        float textWidth = paint.measureText(text);
+                        int paddingWidth = tv.getPaddingLeft() + tv.getPaddingRight() + dpToPx(8);
+                        int cellWidthDp = Math.round((textWidth + paddingWidth) / density);
+                        maxWidth = Math.max(maxWidth, cellWidthDp);
+                    }
+                }
+            }
+        }
+        
+        // Clamp to valid range
+        maxWidth = Math.min(maxWidth, ResizeManager.MAX_COLUMN_WIDTH);
+        
+        // Apply the auto-fitted width
+        resizeManager.setColumnWidth(colIndex, maxWidth);
+        applyColumnWidthToAll(colIndex, maxWidth);
+        
+        showToast("Column " + (char)('A' + colIndex) + " auto-fit: " + maxWidth + "dp", true);
+    }
+    
+    /**
+     * Auto-fit row height based on content
+     */
+    private void autoFitRowHeight(int rowIndex) {
+        if (rowIndex < 0 || rowIndex >= TOTAL_DATA_ROWS) return;
+        
+        // For now, just reset to default - can be enhanced later
+        resizeManager.resetRowHeight(rowIndex);
+        applyRowHeight(rowIndex, ResizeManager.DEFAULT_ROW_HEIGHT);
+        
+        showToast("Row " + (rowIndex + 1) + " auto-fit: " + ResizeManager.DEFAULT_ROW_HEIGHT + "dp", true);
     }
 }
