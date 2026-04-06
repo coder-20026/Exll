@@ -2515,27 +2515,27 @@ public class MainActivity extends Activity {
     // ==================== COPY ALL DATA ONLY ====================
     
     /**
-     * Copy only filled data rows in tab-separated format
-     * Also includes header date (Date:- DD Month YYYY) at the beginning
+     * Copy table data in simple tab-separated format for Excel
+     * Format: Date header + Data rows (tab-separated)
      */
     private void copyAllDataOnly() {
         StringBuilder data = new StringBuilder();
         int filledRowCount = 0;
         
-        // Add header date text first (Date:- DD Month YYYY)
+        // Add Date header text
         String headerDateText = cellG1I1 != null ? cellG1I1.getText().toString().trim() : "";
         if (!headerDateText.isEmpty()) {
             data.append(headerDateText);
-            data.append("\n\n");
+            data.append("\n");
         }
         
-        // Iterate through all data rows
+        // Add data rows (tab-separated: BANK | NAME | STATUS | REASON | LATFROM | LATTO | AREA | KM)
         for (int i = 0; i < allDataRows.size(); i++) {
             LinearLayout row = allDataRows.get(i);
             StringBuilder rowData = new StringBuilder();
             boolean hasData = false;
             
-            // Get cells B to I (data columns only, skip SR NO)
+            // Get cells B to I (data columns only)
             String[] cellTags = {"cellB", "cellC", "cellD", "cellE", "cellF", "cellG", "cellH", "cellI"};
             
             for (int col = 0; col < cellTags.length; col++) {
@@ -2570,7 +2570,7 @@ public class MainActivity extends Activity {
         ClipData clip = ClipData.newPlainText("Table Data", data.toString().trim());
         clipboard.setPrimaryClip(clip);
         
-        showToast(filledRowCount + " rows copied! Paste in Excel", true);
+        showToast(filledRowCount + " rows copied!", true);
     }
     
     // ==================== CLEAR ALL DATA ====================
