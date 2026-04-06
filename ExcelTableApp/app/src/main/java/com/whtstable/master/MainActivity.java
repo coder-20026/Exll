@@ -2522,14 +2522,7 @@ public class MainActivity extends Activity {
         StringBuilder data = new StringBuilder();
         int filledRowCount = 0;
         
-        // Add header date text first (Date:- DD Month YYYY)
-        String headerDateText = cellG1I1 != null ? cellG1I1.getText().toString().trim() : "";
-        if (!headerDateText.isEmpty()) {
-            data.append(headerDateText);
-            data.append("\n\n");
-        }
-        
-        // Iterate through all data rows
+        // Iterate through all data rows (Date is NOT included - only row data)
         for (int i = 0; i < allDataRows.size(); i++) {
             LinearLayout row = allDataRows.get(i);
             StringBuilder rowData = new StringBuilder();
