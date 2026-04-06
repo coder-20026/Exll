@@ -5,8 +5,4 @@
     <!-- Horizontal line indicator for row resize -->
     <solid android:color="@color/colorResizeHandle"/>
     
-    <size
-        android:width="match_parent"
-        android:height="3dp"/>
-    
 </shape>
