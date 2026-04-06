@@ -2515,48 +2515,33 @@ public class MainActivity extends Activity {
     // ==================== COPY ALL DATA ONLY ====================
     
     /**
-     * Copy data in Excel-compatible 9-column tab-separated format
-     * Row 1: Field Executive Name (A-F) + Date (G-I)
-     * Row 2: Column Headers
-     * Row 3+: Data rows with SR NO
+     * Copy only filled data rows in tab-separated format
+     * Also includes header date (Date:- DD Month YYYY) at the beginning
      */
     private void copyAllDataOnly() {
         StringBuilder data = new StringBuilder();
         int filledRowCount = 0;
         
-        // ========== ROW 1: Header Row (Field Executive Name + Date) ==========
-        // Format: [Field Executive Name]\t\t\t\t\t\t[Date:- DD Month YYYY]\t\t
-        // Columns: A=text, B-F=empty, G=date, H-I=empty (total 9 columns)
-        String fieldExecName = cellA1F1 != null ? cellA1F1.getText().toString().trim() : "Field Executive Name";
+        // Add header date text first (Date:- DD Month YYYY)
         String headerDateText = cellG1I1 != null ? cellG1I1.getText().toString().trim() : "";
+        if (!headerDateText.isEmpty()) {
+            data.append(headerDateText);
+            data.append("\n\n");
+        }
         
-        // Row 1: A(name) + 5 empty tabs (B-F) + G(date) + 2 empty tabs (H-I)
-        data.append(fieldExecName);
-        data.append("\t\t\t\t\t\t"); // 6 tabs to reach column G
-        data.append(headerDateText);
-        data.append("\t\t"); // 2 tabs for H-I (empty)
-        data.append("\n");
-        
-        // ========== ROW 2: Column Headers ==========
-        // SR NO | BANK NAME | APPLICANT NAME | STATUS | REASON FOR CNV | LATLONG FROM | LATLONG TO | AREA | KM
-        data.append("SR NO\tBANK NAME\tAPPLICANT NAME\tSTATUS\tREASON FOR CNV\tLATLONG FROM\tLATLONG TO\tAREA\tKM");
-        data.append("\n");
-        
-        // ========== ROW 3+: Data Rows ==========
-        // Iterate through all data rows with SR NO
+        // Iterate through all data rows
         for (int i = 0; i < allDataRows.size(); i++) {
             LinearLayout row = allDataRows.get(i);
             StringBuilder rowData = new StringBuilder();
             boolean hasData = false;
             
-            // Column A: SR NO
-            rowData.append(String.valueOf(i + 1));
-            
-            // Get cells B to I (data columns)
+            // Get cells B to I (data columns only, skip SR NO)
             String[] cellTags = {"cellB", "cellC", "cellD", "cellE", "cellF", "cellG", "cellH", "cellI"};
             
             for (int col = 0; col < cellTags.length; col++) {
-                rowData.append("\t");
+                if (col > 0) {
+                    rowData.append("\t");
+                }
                 EditText cell = (EditText) row.findViewWithTag(cellTags[col]);
                 if (cell != null) {
                     String text = cell.getText().toString().trim();
