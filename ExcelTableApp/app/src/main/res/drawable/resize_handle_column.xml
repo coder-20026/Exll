@@ -5,8 +5,4 @@
     <!-- Vertical line indicator for column resize -->
     <solid android:color="@color/colorResizeHandle"/>
     
-    <size
-        android:width="3dp"
-        android:height="match_parent"/>
-    
 </shape>
