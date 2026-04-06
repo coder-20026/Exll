@@ -133,6 +133,9 @@ public class MainActivity extends Activity {
     private String currentDateFull = "";
     private String currentDay = "";
     
+    // Flag to prevent auto-save during data loading
+    private boolean isLoadingData = false;
+    
     // Excel Column headers for copy
     private String[] columnHeaders = {
         "SR NO", "BANK NAME", "APPLICANT NAME", "STATUS", "REASON FOR CNV", 
@@ -1445,6 +1448,9 @@ public class MainActivity extends Activity {
     }
     
     private void loadTableFromDatabase() {
+        // Set flag to prevent auto-save during loading
+        isLoadingData = true;
+        
         // Clear selection
         selectionManager.clearSelection();
         
@@ -1458,6 +1464,11 @@ public class MainActivity extends Activity {
             currentDateFull = "";
         } else {
             currentDateFull = entries.get(entries.size() - 1).dateFull;
+            // Also update currentDay from the last entry
+            String lastDay = entries.get(entries.size() - 1).day;
+            if (lastDay != null && !lastDay.isEmpty()) {
+                currentDay = lastDay;
+            }
         }
         
         // Fill data rows with database entries
@@ -1471,6 +1482,9 @@ public class MainActivity extends Activity {
         
         // Apply saved resize values
         applySavedResizeValues();
+        
+        // Reset flag after loading complete
+        isLoadingData = false;
     }
     
     private void clearAllDataRows() {
@@ -2438,6 +2452,9 @@ public class MainActivity extends Activity {
      * Silently saves data to database without disturbing user
      */
     private void autoSaveRowData(EditText changedCell) {
+        // Skip auto-save if data is being loaded from database
+        if (isLoadingData) return;
+        
         // Find the parent row of the changed cell
         LinearLayout parentRow = (LinearLayout) changedCell.getParent();
         if (parentRow == null) return;
@@ -2479,7 +2496,7 @@ public class MainActivity extends Activity {
         entry.month = currentMonth;
         entry.year = currentYear;
         entry.dateFull = currentDateFull.isEmpty() ? (currentMonth + " " + currentYear) : currentDateFull;
-        entry.day = "";
+        entry.day = currentDay.isEmpty() ? "1" : currentDay;
         entry.bankName = bankName;
         entry.applicantName = applicantName;
         entry.status = status;
@@ -2522,12 +2539,7 @@ public class MainActivity extends Activity {
         StringBuilder data = new StringBuilder();
         int filledRowCount = 0;
         
-        // Add Date header text
-        String headerDateText = cellG1I1 != null ? cellG1I1.getText().toString().trim() : "";
-        if (!headerDateText.isEmpty()) {
-            data.append(headerDateText);
-            data.append("\n");
-        }
+        // Date header removed - only row data will be copied
         
         // Add data rows (tab-separated: BANK | NAME | STATUS | REASON | LATFROM | LATTO | AREA | KM)
         for (int i = 0; i < allDataRows.size(); i++) {
