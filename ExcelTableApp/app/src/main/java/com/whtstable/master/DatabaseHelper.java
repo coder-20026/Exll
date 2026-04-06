@@ -289,46 +289,4 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
         db.delete(TABLE_ENTRIES, null, null);
     }
-    
-    /**
-     * Get the last entry's LATLONG TO value for a given month/year
-     * Used for LATLONG chain system
-     */
-    public String getLastLatlongTo(String month, String year) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        
-        Cursor cursor = db.query(TABLE_ENTRIES, 
-            new String[]{COL_LATLONG_TO}, 
-            COL_MONTH + "=? AND " + COL_YEAR + "=?", 
-            new String[]{month, year}, 
-            null, null, 
-            COL_ID + " DESC",  // Order by ID descending to get latest
-            "1");  // Limit 1
-        
-        String result = null;
-        if (cursor.moveToFirst()) {
-            result = cursor.getString(0);
-        }
-        cursor.close();
-        return result;
-    }
-    
-    /**
-     * Get entry count for a given month/year
-     */
-    public int getEntryCount(String month, String year) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        
-        Cursor cursor = db.rawQuery(
-            "SELECT COUNT(*) FROM " + TABLE_ENTRIES + 
-            " WHERE " + COL_MONTH + "=? AND " + COL_YEAR + "=?",
-            new String[]{month, year});
-        
-        int count = 0;
-        if (cursor.moveToFirst()) {
-            count = cursor.getInt(0);
-        }
-        cursor.close();
-        return count;
-    }
 }
