@@ -44,6 +44,9 @@ public class MainActivity extends Activity {
     private static final int TOTAL_COLUMNS = 9;
     private static final int TOTAL_DATA_ROWS = 15;       // Row 3-17 (15 data rows total)
     
+    // LATLONG Auto-Flow System Constants
+    private static final String FIXED_LATLONG_VALUE = "22.1831,71.6693";  // Fixed starting value for F3
+    
     // Views
     private LinearLayout dataRowsContainer;
     private EditText cellA1F1, cellG1I1;
@@ -1471,6 +1474,12 @@ public class MainActivity extends Activity {
         
         // Apply saved resize values
         applySavedResizeValues();
+        
+        // Initialize LATLONG chain (F3 = fixed value)
+        initializeLatlongChain();
+        
+        // Apply chain logic for existing data
+        applyLatlongChainLogic();
     }
     
     private void clearAllDataRows() {
@@ -1488,13 +1497,22 @@ public class MainActivity extends Activity {
     private void fillRowWithEntry(LinearLayout row, DatabaseHelper.EntryData entry, int rowIndex) {
         row.setTag(entry.id); // Store entry ID
         
+        // LATLONG Chain: For first row (F3), ensure fixed value is set
+        String latlongFromValue = entry.latlongFrom;
+        if (rowIndex == 0) {
+            // F3 should always be fixed value
+            if (latlongFromValue == null || latlongFromValue.isEmpty()) {
+                latlongFromValue = FIXED_LATLONG_VALUE;
+            }
+        }
+        
         // Fill cells B-I
         String[] values = {
             entry.bankName,
             entry.applicantName,
             entry.status,
             entry.reasonCnv,
-            entry.latlongFrom,
+            latlongFromValue,  // Use processed latlongFrom
             entry.latlongTo,
             entry.area,
             entry.km
@@ -2502,6 +2520,15 @@ public class MainActivity extends Activity {
         
         // Recalculate totals
         calculateTotals();
+        
+        // LATLONG Chain Logic: If cellG (LATLONG TO) was changed, chain to next row's cellF
+        String changedCellTag = (String) changedCell.getTag();
+        if (changedCellTag != null && changedCellTag.equals("cellG")) {
+            handleLatlongToEntry(rowIndex, latlongTo);
+        }
+        
+        // Apply full chain logic to ensure consistency
+        applyLatlongChainLogic();
     }
     
     /**
@@ -2596,13 +2623,21 @@ public class MainActivity extends Activity {
     
     /**
      * Clear all data from main table and database for current month/year
+     * IMPORTANT: F3 (first row cellF) fixed value is preserved
      */
     private void clearAllTableData() {
         // Clear all data cells in the table
-        for (LinearLayout row : allDataRows) {
-            // Clear cells B to I
+        for (int rowIdx = 0; rowIdx < allDataRows.size(); rowIdx++) {
+            LinearLayout row = allDataRows.get(rowIdx);
+            
+            // Clear cells B to I, but preserve F3 (first row's cellF)
             String[] cellTags = {"cellB", "cellC", "cellD", "cellE", "cellF", "cellG", "cellH", "cellI"};
             for (String tag : cellTags) {
+                // Skip cellF for first row (preserve F3 fixed value)
+                if (rowIdx == 0 && tag.equals("cellF")) {
+                    continue; // Don't clear F3
+                }
+                
                 EditText cell = (EditText) row.findViewWithTag(tag);
                 if (cell != null) {
                     cell.setText("");
@@ -2618,6 +2653,9 @@ public class MainActivity extends Activity {
             row.setTag(null);
         }
         
+        // Re-initialize F3 with fixed value (in case it was somehow cleared)
+        initializeLatlongChain();
+        
         // Reset totals
         if (cellTotalKmCount != null) cellTotalKmCount.setText("");
         
@@ -2626,6 +2664,142 @@ public class MainActivity extends Activity {
         calculateTotals();
         
         showToast("All data cleared!", true);
+    }
+    
+    // ==================== LATLONG AUTO-FLOW SYSTEM ====================
+    
+    /**
+     * Initialize LATLONG chain system
+     * Sets F3 (first row, cellF) to fixed starting value
+     * Called after table load and after clear all
+     */
+    private void initializeLatlongChain() {
+        if (allDataRows.isEmpty()) return;
+        
+        // Set F3 (first data row, column F) to fixed value
+        LinearLayout firstRow = allDataRows.get(0);
+        EditText cellF = (EditText) firstRow.findViewWithTag("cellF");
+        if (cellF != null) {
+            String currentValue = cellF.getText().toString().trim();
+            // Only set if empty or if it's a fresh table
+            if (currentValue.isEmpty()) {
+                cellF.setText(FIXED_LATLONG_VALUE);
+            }
+        }
+    }
+    
+    /**
+     * Apply LATLONG chain logic after data entry
+     * G(n) value goes to F(n+1)
+     * If last row and G is empty, fill G with fixed value and stop chain
+     */
+    private void applyLatlongChainLogic() {
+        if (allDataRows.isEmpty()) return;
+        
+        // Ensure F3 always has fixed value
+        LinearLayout firstRow = allDataRows.get(0);
+        EditText firstCellF = (EditText) firstRow.findViewWithTag("cellF");
+        if (firstCellF != null) {
+            String firstFValue = firstCellF.getText().toString().trim();
+            if (firstFValue.isEmpty()) {
+                firstCellF.setText(FIXED_LATLONG_VALUE);
+            }
+        }
+        
+        // Find the last row with data
+        int lastFilledRowIndex = -1;
+        for (int i = allDataRows.size() - 1; i >= 0; i--) {
+            LinearLayout row = allDataRows.get(i);
+            if (rowHasData(row)) {
+                lastFilledRowIndex = i;
+                break;
+            }
+        }
+        
+        if (lastFilledRowIndex < 0) return; // No data rows
+        
+        // Apply chain: G(n) -> F(n+1) for all rows up to last filled row
+        for (int i = 0; i < lastFilledRowIndex; i++) {
+            LinearLayout currentRow = allDataRows.get(i);
+            LinearLayout nextRow = allDataRows.get(i + 1);
+            
+            EditText currentCellG = (EditText) currentRow.findViewWithTag("cellG");
+            EditText nextCellF = (EditText) nextRow.findViewWithTag("cellF");
+            
+            if (currentCellG != null && nextCellF != null) {
+                String gValue = currentCellG.getText().toString().trim();
+                if (!gValue.isEmpty()) {
+                    String nextFValue = nextCellF.getText().toString().trim();
+                    // Only auto-fill if next F is empty (don't overwrite user data)
+                    if (nextFValue.isEmpty()) {
+                        nextCellF.setText(gValue);
+                    }
+                }
+            }
+        }
+        
+        // End condition: If last filled row's G is empty, fill with fixed value
+        LinearLayout lastFilledRow = allDataRows.get(lastFilledRowIndex);
+        EditText lastCellG = (EditText) lastFilledRow.findViewWithTag("cellG");
+        if (lastCellG != null) {
+            String lastGValue = lastCellG.getText().toString().trim();
+            if (lastGValue.isEmpty()) {
+                // Check if this row has other data (not just empty)
+                if (rowHasDataExceptLatlongTo(lastFilledRow)) {
+                    lastCellG.setText(FIXED_LATLONG_VALUE);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Check if a row has any data in columns B-I
+     */
+    private boolean rowHasData(LinearLayout row) {
+        String[] cellTags = {"cellB", "cellC", "cellD", "cellE", "cellF", "cellG", "cellH", "cellI"};
+        for (String tag : cellTags) {
+            EditText cell = (EditText) row.findViewWithTag(tag);
+            if (cell != null && !cell.getText().toString().trim().isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Check if row has data except LATLONG TO (cellG)
+     * Used to determine if we should auto-fill G with fallback value
+     */
+    private boolean rowHasDataExceptLatlongTo(LinearLayout row) {
+        String[] cellTags = {"cellB", "cellC", "cellD", "cellE", "cellF", "cellH", "cellI"};
+        for (String tag : cellTags) {
+            EditText cell = (EditText) row.findViewWithTag(tag);
+            if (cell != null && !cell.getText().toString().trim().isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Called when user enters LATLONG TO (cellG) value
+     * Automatically chains to next row's LATLONG FROM (cellF)
+     */
+    private void handleLatlongToEntry(int rowIndex, String latlongToValue) {
+        if (latlongToValue == null || latlongToValue.isEmpty()) return;
+        if (rowIndex < 0 || rowIndex >= allDataRows.size() - 1) return; // No next row
+        
+        // Get next row
+        LinearLayout nextRow = allDataRows.get(rowIndex + 1);
+        EditText nextCellF = (EditText) nextRow.findViewWithTag("cellF");
+        
+        if (nextCellF != null) {
+            String nextFValue = nextCellF.getText().toString().trim();
+            // Only auto-fill if empty (don't overwrite user data)
+            if (nextFValue.isEmpty()) {
+                nextCellF.setText(latlongToValue);
+            }
+        }
     }
     
     // ==================== DATE SYNC (POPUP -> HEADER) ====================
