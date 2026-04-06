@@ -13,7 +13,9 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.text.Editable;
 import android.text.InputType;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -54,6 +56,7 @@ public class MainActivity extends Activity {
     private TextView cellFinalTotal;
     
     private Button btnToggleFloating, btnSelectMonth, btnSelectYear, btnHistory, btnBorders;
+    private Button btnCopyAll, btnClearAll;
     private TextView tvCurrentDate, tvEntryCount;
     
     // Border Panel Views
@@ -217,6 +220,8 @@ public class MainActivity extends Activity {
         btnSelectYear = (Button) findViewById(R.id.btnSelectYear);
         btnHistory = (Button) findViewById(R.id.btnHistory);
         btnBorders = (Button) findViewById(R.id.btnBorders);
+        btnCopyAll = (Button) findViewById(R.id.btnCopyAll);
+        btnClearAll = (Button) findViewById(R.id.btnClearAll);
         tvCurrentDate = (TextView) findViewById(R.id.tvCurrentDate);
         tvEntryCount = (TextView) findViewById(R.id.tvEntryCount);
         tvSelectionInfo = (TextView) findViewById(R.id.tvSelectionInfo);
@@ -1033,29 +1038,29 @@ public class MainActivity extends Activity {
         cellA.setLayoutParams(paramsA);
         row.addView(cellA);
         
-        // Column B: BANK NAME (left align)
-        row.addView(createEditCell("", COLUMN_WIDTHS[1], "cellB", Gravity.START | Gravity.CENTER_VERTICAL, 14, borderDrawable));
+        // Column B: BANK NAME (center aligned)
+        row.addView(createEditCell("", COLUMN_WIDTHS[1], "cellB", Gravity.CENTER, 14, borderDrawable));
         
-        // Column C: APPLICANT NAME (left align, auto-adjust based on content)
-        row.addView(createEditCell("", COLUMN_WIDTHS[2], "cellC", Gravity.START | Gravity.CENTER_VERTICAL, 14, borderDrawable));
+        // Column C: APPLICANT NAME (center aligned)
+        row.addView(createEditCell("", COLUMN_WIDTHS[2], "cellC", Gravity.CENTER, 14, borderDrawable));
         
-        // Column D: STATUS (center)
+        // Column D: STATUS (center aligned)
         row.addView(createEditCell("", COLUMN_WIDTHS[3], "cellD", Gravity.CENTER, 14, borderDrawable));
         
-        // Column E: REASON FOR CNV (left align, smaller font)
-        row.addView(createEditCell("", COLUMN_WIDTHS[4], "cellE", Gravity.START | Gravity.CENTER_VERTICAL, 12, borderDrawable));
+        // Column E: REASON FOR CNV (center aligned)
+        row.addView(createEditCell("", COLUMN_WIDTHS[4], "cellE", Gravity.CENTER, 12, borderDrawable));
         
-        // Column F: LATLONG FROM (left align, smaller font)
-        row.addView(createEditCell("", COLUMN_WIDTHS[5], "cellF", Gravity.START | Gravity.CENTER_VERTICAL, 12, borderDrawable));
+        // Column F: LATLONG FROM (center aligned)
+        row.addView(createEditCell("", COLUMN_WIDTHS[5], "cellF", Gravity.CENTER, 12, borderDrawable));
         
-        // Column G: LATLONG TO (left align, smaller font)
-        row.addView(createEditCell("", COLUMN_WIDTHS[6], "cellG", Gravity.START | Gravity.CENTER_VERTICAL, 12, borderDrawable));
+        // Column G: LATLONG TO (center aligned)
+        row.addView(createEditCell("", COLUMN_WIDTHS[6], "cellG", Gravity.CENTER, 12, borderDrawable));
         
-        // Column H: AREA (left align)
-        row.addView(createEditCell("", COLUMN_WIDTHS[7], "cellH", Gravity.START | Gravity.CENTER_VERTICAL, 14, borderDrawable));
+        // Column H: AREA (center aligned)
+        row.addView(createEditCell("", COLUMN_WIDTHS[7], "cellH", Gravity.CENTER, 14, borderDrawable));
         
-        // Column I: KM (right align, number input)
-        EditText cellI = createEditCell("", COLUMN_WIDTHS[8], "cellI", Gravity.END | Gravity.CENTER_VERTICAL, 14, borderDrawable);
+        // Column I: KM (center aligned, number input)
+        EditText cellI = createEditCell("", COLUMN_WIDTHS[8], "cellI", Gravity.CENTER, 14, borderDrawable);
         cellI.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         row.addView(cellI);
         
@@ -1099,6 +1104,21 @@ public class MainActivity extends Activity {
                         selectCellForBorder(rowIndex, colIndex, v);
                     }
                 }
+            }
+        });
+        
+        // Add TextWatcher for auto-save functionality
+        et.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            
+            @Override
+            public void afterTextChanged(Editable s) {
+                // Auto-save when text changes
+                autoSaveRowData(et);
             }
         });
         
@@ -1357,6 +1377,22 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 toggleBorderPanel();
+            }
+        });
+        
+        // COPY ALL button listener
+        btnCopyAll.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                copyAllDataOnly();
+            }
+        });
+        
+        // CLEAR ALL button listener
+        btnClearAll.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showClearAllConfirmation();
             }
         });
     }
@@ -2387,5 +2423,202 @@ public class MainActivity extends Activity {
         applyRowHeight(rowIndex, ResizeManager.DEFAULT_ROW_HEIGHT);
         
         showToast("Row " + (rowIndex + 1) + " auto-fit: " + ResizeManager.DEFAULT_ROW_HEIGHT + "dp", true);
+    }
+    
+    // ==================== AUTO-SAVE METHODS ====================
+    
+    /**
+     * Auto-save row data when cell text changes
+     * Silently saves data to database without disturbing user
+     */
+    private void autoSaveRowData(EditText changedCell) {
+        // Find the parent row of the changed cell
+        LinearLayout parentRow = (LinearLayout) changedCell.getParent();
+        if (parentRow == null) return;
+        
+        int rowIndex = allDataRows.indexOf(parentRow);
+        if (rowIndex < 0) return;
+        
+        // Get or create entry for this row
+        Object tag = parentRow.getTag();
+        
+        // Collect all cell data from the row
+        String bankName = getCellText(parentRow, "cellB");
+        String applicantName = getCellText(parentRow, "cellC");
+        String status = getCellText(parentRow, "cellD");
+        String reasonCnv = getCellText(parentRow, "cellE");
+        String latlongFrom = getCellText(parentRow, "cellF");
+        String latlongTo = getCellText(parentRow, "cellG");
+        String area = getCellText(parentRow, "cellH");
+        String km = getCellText(parentRow, "cellI");
+        
+        // Check if row has any data
+        boolean hasData = !bankName.isEmpty() || !applicantName.isEmpty() || 
+                          !status.isEmpty() || !reasonCnv.isEmpty() ||
+                          !latlongFrom.isEmpty() || !latlongTo.isEmpty() || 
+                          !area.isEmpty() || !km.isEmpty();
+        
+        if (!hasData) {
+            // If row is empty and has existing entry, delete it
+            if (tag != null) {
+                long entryId = (long) tag;
+                dbHelper.deleteEntry(entryId);
+                parentRow.setTag(null);
+            }
+            return;
+        }
+        
+        // Create entry data
+        DatabaseHelper.EntryData entry = new DatabaseHelper.EntryData();
+        entry.month = currentMonth;
+        entry.year = currentYear;
+        entry.dateFull = currentDateFull.isEmpty() ? (currentMonth + " " + currentYear) : currentDateFull;
+        entry.day = "";
+        entry.bankName = bankName;
+        entry.applicantName = applicantName;
+        entry.status = status;
+        entry.reasonCnv = reasonCnv;
+        entry.latlongFrom = latlongFrom;
+        entry.latlongTo = latlongTo;
+        entry.area = area;
+        entry.km = km;
+        
+        if (tag != null) {
+            // Update existing entry
+            long entryId = (long) tag;
+            entry.id = entryId;
+            dbHelper.updateEntry(entryId, entry);
+        } else {
+            // Create new entry
+            long newId = dbHelper.addEntry(entry);
+            parentRow.setTag(newId);
+        }
+        
+        // Recalculate totals
+        calculateTotals();
+    }
+    
+    /**
+     * Get cell text by tag
+     */
+    private String getCellText(LinearLayout row, String tag) {
+        EditText cell = (EditText) row.findViewWithTag(tag);
+        return cell != null ? cell.getText().toString().trim() : "";
+    }
+    
+    // ==================== COPY ALL DATA ONLY ====================
+    
+    /**
+     * Copy only filled data rows in tab-separated format
+     * Format: BANK NAME\tAPPLICANT NAME\tSTATUS\tREASON\tLATFROM\tLATTO\tAREA\tKM
+     */
+    private void copyAllDataOnly() {
+        StringBuilder data = new StringBuilder();
+        int filledRowCount = 0;
+        
+        // Iterate through all data rows
+        for (int i = 0; i < allDataRows.size(); i++) {
+            LinearLayout row = allDataRows.get(i);
+            StringBuilder rowData = new StringBuilder();
+            boolean hasData = false;
+            
+            // Get cells B to I (data columns only, skip SR NO)
+            String[] cellTags = {"cellB", "cellC", "cellD", "cellE", "cellF", "cellG", "cellH", "cellI"};
+            
+            for (int col = 0; col < cellTags.length; col++) {
+                if (col > 0) {
+                    rowData.append("\t");
+                }
+                EditText cell = (EditText) row.findViewWithTag(cellTags[col]);
+                if (cell != null) {
+                    String text = cell.getText().toString().trim();
+                    rowData.append(text);
+                    if (!text.isEmpty()) {
+                        hasData = true;
+                    }
+                }
+            }
+            
+            // Only add rows that have data
+            if (hasData) {
+                data.append(rowData.toString());
+                data.append("\n");
+                filledRowCount++;
+            }
+        }
+        
+        if (filledRowCount == 0) {
+            showToast("No data to copy!", false);
+            return;
+        }
+        
+        // Copy to clipboard
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("Table Data", data.toString().trim());
+        clipboard.setPrimaryClip(clip);
+        
+        showToast(filledRowCount + " rows copied! Paste in Excel", true);
+    }
+    
+    // ==================== CLEAR ALL DATA ====================
+    
+    /**
+     * Show confirmation dialog before clearing all data
+     */
+    private void showClearAllConfirmation() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("CLEAR ALL DATA");
+        builder.setMessage("Are you sure you want to clear all data?\n\nThis will delete all entries for " + currentMonth + " " + currentYear + ".");
+        
+        builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                clearAllTableData();
+            }
+        });
+        
+        builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // Do nothing, just close dialog
+                dialog.dismiss();
+            }
+        });
+        
+        builder.show();
+    }
+    
+    /**
+     * Clear all data from main table and database for current month/year
+     */
+    private void clearAllTableData() {
+        // Clear all data cells in the table
+        for (LinearLayout row : allDataRows) {
+            // Clear cells B to I
+            String[] cellTags = {"cellB", "cellC", "cellD", "cellE", "cellF", "cellG", "cellH", "cellI"};
+            for (String tag : cellTags) {
+                EditText cell = (EditText) row.findViewWithTag(tag);
+                if (cell != null) {
+                    cell.setText("");
+                }
+            }
+            
+            // Delete from database if entry exists
+            Object entryTag = row.getTag();
+            if (entryTag != null) {
+                long entryId = (long) entryTag;
+                dbHelper.deleteEntry(entryId);
+            }
+            row.setTag(null);
+        }
+        
+        // Reset totals
+        if (cellTotalKmCount != null) cellTotalKmCount.setText("");
+        
+        // Update display
+        updateCurrentDateDisplay();
+        calculateTotals();
+        
+        showToast("All data cleared!", true);
     }
 }
