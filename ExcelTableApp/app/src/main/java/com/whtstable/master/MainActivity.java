@@ -131,6 +131,7 @@ public class MainActivity extends Activity {
     private String currentMonth = "January";
     private String currentYear = "2026";
     private String currentDateFull = "";
+    private String currentDay = "";
     
     // Excel Column headers for copy
     private String[] columnHeaders = {
@@ -1410,6 +1411,7 @@ public class MainActivity extends Activity {
                 updateMonthYearButtons();
                 loadTableFromDatabase();
                 applyBordersToAllCells();
+                updateHeaderDateAfterMonthYearChange();
             }
         });
         builder.show();
@@ -1429,6 +1431,7 @@ public class MainActivity extends Activity {
                 updateMonthYearButtons();
                 loadTableFromDatabase();
                 applyBordersToAllCells();
+                updateHeaderDateAfterMonthYearChange();
             }
         });
         builder.show();
@@ -1624,6 +1627,9 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         loadTableFromDatabase();
+        
+        // Sync header date from popup entry
+        syncHeaderDateFromDatabase();
     }
     
     @Override
@@ -2510,11 +2516,18 @@ public class MainActivity extends Activity {
     
     /**
      * Copy only filled data rows in tab-separated format
-     * Format: BANK NAME\tAPPLICANT NAME\tSTATUS\tREASON\tLATFROM\tLATTO\tAREA\tKM
+     * Also includes header date (Date:- DD Month YYYY) at the beginning
      */
     private void copyAllDataOnly() {
         StringBuilder data = new StringBuilder();
         int filledRowCount = 0;
+        
+        // Add header date text first (Date:- DD Month YYYY)
+        String headerDateText = cellG1I1 != null ? cellG1I1.getText().toString().trim() : "";
+        if (!headerDateText.isEmpty()) {
+            data.append(headerDateText);
+            data.append("\n\n");
+        }
         
         // Iterate through all data rows
         for (int i = 0; i < allDataRows.size(); i++) {
@@ -2620,5 +2633,59 @@ public class MainActivity extends Activity {
         calculateTotals();
         
         showToast("All data cleared!", true);
+    }
+    
+    // ==================== DATE SYNC (POPUP -> HEADER) ====================
+    
+    /**
+     * Sync header date from database (called when popup saves date)
+     * Format: Date:- DD Month YYYY
+     */
+    private void syncHeaderDateFromDatabase() {
+        // Get saved day from database
+        String savedDay = dbHelper.getSelectedDay();
+        
+        if (savedDay == null || savedDay.isEmpty()) {
+            // No day saved, keep header as is or set default
+            return;
+        }
+        
+        // Pad day with zero if needed (1 -> 01)
+        if (savedDay.length() == 1) {
+            savedDay = "0" + savedDay;
+        }
+        
+        // Build full date string
+        String fullDateHeader = "Date:- " + savedDay + " " + currentMonth + " " + currentYear;
+        
+        // Update header cell (cellG1I1)
+        if (cellG1I1 != null) {
+            cellG1I1.setText(fullDateHeader);
+        }
+        
+        // Also update currentDay variable
+        currentDay = savedDay;
+        
+        // Update currentDateFull for other uses
+        currentDateFull = savedDay + " " + currentMonth + " " + currentYear;
+    }
+    
+    /**
+     * Update header date when month/year changes
+     * Called after month or year selection
+     */
+    private void updateHeaderDateAfterMonthYearChange() {
+        if (currentDay.isEmpty()) {
+            return;
+        }
+        
+        // Rebuild date with new month/year
+        String fullDateHeader = "Date:- " + currentDay + " " + currentMonth + " " + currentYear;
+        
+        if (cellG1I1 != null) {
+            cellG1I1.setText(fullDateHeader);
+        }
+        
+        currentDateFull = currentDay + " " + currentMonth + " " + currentYear;
     }
 }

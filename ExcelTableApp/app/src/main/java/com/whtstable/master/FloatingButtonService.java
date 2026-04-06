@@ -609,6 +609,9 @@ public class FloatingButtonService extends Service {
         // Save to database
         long id = dbHelper.addEntry(entry);
         
+        // Save selected day for main table header sync
+        dbHelper.setSelectedDay(entry.day);
+        
         if (id > 0) {
             Toast.makeText(this, "Saved: " + entry.dateFull, Toast.LENGTH_SHORT).show();
             

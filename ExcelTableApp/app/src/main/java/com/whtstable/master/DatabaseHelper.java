@@ -128,6 +128,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return getSetting("selected_year", "2026");
     }
     
+    public void setSelectedDay(String day) {
+        setSetting("selected_day", day);
+    }
+    
+    public String getSelectedDay() {
+        return getSetting("selected_day", "");
+    }
+    
     // =========== ENTRY METHODS ===========
     
     public static class EntryData {
