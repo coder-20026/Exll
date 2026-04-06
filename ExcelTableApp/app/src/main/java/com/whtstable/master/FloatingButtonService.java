@@ -35,9 +35,6 @@ public class FloatingButtonService extends Service {
     private static final String CHANNEL_ID = "WhtsTableFloatingChannel";
     private static final int NOTIFICATION_ID = 1001;
     
-    // LATLONG Auto-Flow System - Fixed starting value (same as MainActivity)
-    private static final String FIXED_LATLONG_VALUE = "22.1831,71.6693";
-    
     private WindowManager windowManager;
     private View floatingButton;
     private View livePreviewPopup;
@@ -609,9 +606,6 @@ public class FloatingButtonService extends Service {
         entry.latlongTo = coords;
         entry.area = area;
         
-        // LATLONG Chain Logic: Set latlongFrom based on previous entry
-        entry.latlongFrom = calculateLatlongFrom();
-        
         // Save to database
         long id = dbHelper.addEntry(entry);
         
@@ -661,36 +655,6 @@ public class FloatingButtonService extends Service {
             livePreviewPopup = null;
             isLivePreviewShowing = false;
         }
-    }
-    
-    // ==================== LATLONG CHAIN METHODS ====================
-    
-    /**
-     * Calculate LATLONG FROM value for new entry
-     * Chain logic: Previous entry's LATLONG TO becomes this entry's LATLONG FROM
-     * If first entry or no previous TO, use fixed starting value
-     */
-    private String calculateLatlongFrom() {
-        // Get existing entries for current month/year
-        java.util.ArrayList<DatabaseHelper.EntryData> entries = 
-            dbHelper.getEntriesByMonthYear(currentMonth, currentYear);
-        
-        if (entries.isEmpty()) {
-            // First entry - use fixed starting value
-            return FIXED_LATLONG_VALUE;
-        }
-        
-        // Get the last entry's LATLONG TO
-        DatabaseHelper.EntryData lastEntry = entries.get(entries.size() - 1);
-        String lastLatlongTo = lastEntry.latlongTo;
-        
-        if (lastLatlongTo != null && !lastLatlongTo.trim().isEmpty()) {
-            // Chain: Previous TO becomes this FROM
-            return lastLatlongTo.trim();
-        }
-        
-        // If last entry has no TO, use fixed value
-        return FIXED_LATLONG_VALUE;
     }
     
     // Parsing methods
