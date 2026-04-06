@@ -612,11 +612,6 @@ public class FloatingButtonService extends Service {
         // LATLONG Chain Logic: Set latlongFrom based on previous entry
         entry.latlongFrom = calculateLatlongFrom();
         
-        // If LATLONG TO (coords) is empty, set fallback value
-        if (coords.isEmpty()) {
-            entry.latlongTo = FIXED_LATLONG_VALUE;
-        }
-        
         // Save to database
         long id = dbHelper.addEntry(entry);
         
